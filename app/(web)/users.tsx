@@ -1,0 +1,461 @@
+import { useEffect, useState } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  ActivityIndicator, TextInput, Modal, Switch,
+} from 'react-native';
+import { usersService, User } from '../../src/services/users.service';
+import { authService } from '../../src/services/auth.service';
+import { useAuthStore } from '../../src/stores/auth.store';
+import { validators } from '../../src/utils/validators';
+import { COLORS } from '../../src/constants';
+
+const ROLE_COLORS: Record<string, string> = {
+  ADMIN: COLORS.danger,
+  SUPERVISOR: COLORS.primary,
+  USER: COLORS.success,
+};
+
+const EMPTY_NEW = { nombre: '', correo: '', password: '', telefono: '', rol: 'USER', supervisorId: '' };
+const EMPTY_EDIT = { nombre: '', correo: '', telefono: '', rol: '', is_active: true };
+
+export default function UsersScreen() {
+  const { user: currentUser } = useAuthStore();
+  const isAdmin = currentUser?.rol === 'ADMIN';
+  const isSupervisor = currentUser?.rol === 'SUPERVISOR';
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [supervisors, setSupervisors] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editing, setEditing] = useState<User | null>(null);
+  const [newForm, setNewForm] = useState(EMPTY_NEW);
+  const [editForm, setEditForm] = useState(EMPTY_EDIT);
+  const [saving, setSaving] = useState(false);
+  const [createError, setCreateError] = useState('');
+
+  const load = () => {
+    setLoading(true);
+    // Ambos roles usan GET /api/users - el backend filtra por rol automáticamente
+    usersService.getAll()
+      .then((data) => {
+        setUsers(data);
+        // Guardar supervisores para el select al crear USER como ADMIN
+        if (isAdmin) setSupervisors(data.filter((u) => u.rol === 'SUPERVISOR'));
+      })
+      .catch(() => setUsers([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { if (currentUser) load(); }, [currentUser]);
+
+  const openCreate = () => {
+    setNewForm(EMPTY_NEW);
+    setCreateError('');
+    setShowCreate(true);
+  };
+
+  const openEdit = (u: User) => {
+    setEditForm({ nombre: u.nombre, correo: u.correo, telefono: u.telefono ?? '', rol: u.rol, is_active: u.is_active });
+    setEditing(u);
+    setShowEdit(true);
+  };
+
+  const handleCreate = async () => {
+    setCreateError('');
+
+    // Validaciones
+    const nameError = validators.nombre(newForm.nombre);
+    if (nameError) { setCreateError(nameError); return; }
+    const correoError = validators.correo(newForm.correo);
+    if (correoError) { setCreateError(correoError); return; }
+    const passError = validators.password(newForm.password);
+    if (passError) { setCreateError(passError); return; }
+    if (newForm.telefono) {
+      const telError = validators.telefono(newForm.telefono);
+      if (telError) { setCreateError(telError); return; }
+    }
+    // ADMIN creando USER debe asignar supervisor
+    if (isAdmin && newForm.rol === 'USER' && !newForm.supervisorId) {
+      setCreateError('Debes asignar un supervisor al nuevo usuario');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const payload: any = {
+        nombre: newForm.nombre.trim(),
+        correo: newForm.correo.trim().toLowerCase(),
+        password: newForm.password,
+        telefono: newForm.telefono.trim() || undefined,
+      };
+
+      // ADMIN envía rol y supervisorId si aplica
+      if (isAdmin) {
+        payload.rol = newForm.rol;
+        if (newForm.rol === 'USER' && newForm.supervisorId) {
+          payload.supervisorId = Number(newForm.supervisorId);
+        }
+      }
+      // SUPERVISOR no envía rol ni supervisorId (backend lo asigna)
+
+      await authService.createUser(payload);
+      setShowCreate(false);
+      load();
+    } catch (e: any) {
+      setCreateError(e?.response?.data?.message || 'Error al crear usuario');
+    } finally { setSaving(false); }
+  };
+
+  const handleEdit = async () => {
+    if (!editing) return;
+
+    const nameError = validators.nombre(editForm.nombre);
+    if (nameError) { alert(nameError); return; }
+    if (editForm.telefono) {
+      const telError = validators.telefono(editForm.telefono);
+      if (telError) { alert(telError); return; }
+    }
+
+    setSaving(true);
+    try {
+      const payload: any = {
+        nombre: editForm.nombre.trim(),
+        correo: editForm.correo.trim(),
+        telefono: editForm.telefono.trim() || undefined,
+        is_active: editForm.is_active,
+      };
+      // Solo ADMIN puede cambiar el rol
+      if (isAdmin) payload.rol = editForm.rol;
+
+      await usersService.update(editing.id_user, payload);
+      setShowEdit(false);
+      load();
+    } catch (e: any) {
+      if (e?.response?.status === 403) {
+        alert('Acceso denegado: no puedes modificar este usuario');
+      } else {
+        alert(e?.response?.data?.message || 'Error al guardar');
+      }
+    } finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('¿Eliminar este usuario?')) return;
+    try {
+      await usersService.delete(id);
+      load();
+    } catch (e: any) {
+      if (e?.response?.status === 403) {
+        alert('Acceso denegado: no puedes eliminar este usuario');
+      } else {
+        alert(e?.response?.data?.message || 'No se pudo eliminar. Puede tener datos asociados.');
+      }
+    }
+  };
+
+  const filtered = users.filter(
+    (u) =>
+      u.nombre?.toLowerCase().includes(search.toLowerCase()) ||
+      u.correo?.toLowerCase().includes(search.toLowerCase()) ||
+      u.rol?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.title}>
+            {isAdmin ? 'Gestión de Usuarios' : 'Mis Usuarios'}
+          </Text>
+          <Text style={styles.sub}>
+            {users.length} usuario{users.length !== 1 ? 's' : ''}
+            {isSupervisor ? ' en tu equipo' : ' en el sistema'}
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
+          <Text style={styles.addBtnText}>+ Nuevo usuario</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.toolbar}>
+        <TextInput
+          style={styles.search}
+          placeholder="Buscar por nombre, correo o rol..."
+          placeholderTextColor={COLORS.textMuted}
+          value={search}
+          onChangeText={setSearch}
+        />
+      </View>
+
+      {loading ? (
+        <ActivityIndicator color={COLORS.primary} style={{ marginTop: 40 }} />
+      ) : (
+        <ScrollView style={styles.table} showsVerticalScrollIndicator={false}>
+          <View style={[styles.row, styles.tableHeader]}>
+            {['Nombre', 'Correo', 'Rol', 'Estado', 'Acciones'].map((h, i) => (
+              <Text key={h} style={[styles.cell, styles.cellHeader, i < 2 && { flex: 2 }]}>{h}</Text>
+            ))}
+          </View>
+
+          {filtered.map((u) => (
+            <View key={u.id_user} style={styles.row}>
+              <Text style={[styles.cell, { flex: 2, color: COLORS.text, fontWeight: '600' }]} numberOfLines={1}>{u.nombre}</Text>
+              <Text style={[styles.cell, { flex: 2, color: COLORS.textSub }]} numberOfLines={1}>{u.correo}</Text>
+              <View style={styles.cell}>
+                <View style={[styles.roleBadge, { backgroundColor: (ROLE_COLORS[u.rol] ?? COLORS.textMuted) + '20', borderColor: (ROLE_COLORS[u.rol] ?? COLORS.textMuted) + '50' }]}>
+                  <Text style={[styles.roleText, { color: ROLE_COLORS[u.rol] ?? COLORS.textMuted }]}>{u.rol}</Text>
+                </View>
+              </View>
+              <View style={styles.cell}>
+                <View style={[styles.statusBadge, { backgroundColor: u.is_active ? COLORS.success + '20' : COLORS.danger + '20' }]}>
+                  <Text style={[styles.statusText, { color: u.is_active ? COLORS.success : COLORS.danger }]}>
+                    {u.is_active ? 'Activo' : 'Inactivo'}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.cell, { flexDirection: 'row', gap: 6 }]}>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => openEdit(u)}>
+                  <Text style={styles.actionBtnText}>✏️</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: COLORS.danger + '20' }]} onPress={() => handleDelete(u.id_user)}>
+                  <Text style={styles.actionBtnText}>🗑</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+
+          {filtered.length === 0 && (
+            <Text style={styles.empty}>
+              {users.length === 0
+                ? isSupervisor ? 'No tienes usuarios en tu equipo aún' : 'No hay usuarios registrados'
+                : 'Sin resultados'}
+            </Text>
+          )}
+        </ScrollView>
+      )}
+
+      {/* CREATE Modal */}
+      <Modal visible={showCreate} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <ScrollView contentContainerStyle={styles.overlayScroll}>
+            <View style={styles.modal}>
+              <Text style={styles.modalTitle}>Crear Nuevo Usuario</Text>
+
+              {isSupervisor && (
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoText}>
+                    ℹ️ El nuevo usuario quedará automáticamente asignado a tu equipo con rol USER.
+                  </Text>
+                </View>
+              )}
+
+              {createError ? (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>⚠️ {createError}</Text>
+                </View>
+              ) : null}
+
+              {[
+                { label: 'Nombre completo *', key: 'nombre', placeholder: 'Juan Pérez' },
+                { label: 'Correo electrónico *', key: 'correo', placeholder: 'juan@ejemplo.com' },
+                { label: 'Contraseña *', key: 'password', placeholder: 'Mínimo 8 caracteres', secure: true },
+                { label: 'Teléfono', key: 'telefono', placeholder: '5551234567' },
+              ].map(({ label, key, placeholder, secure }: any) => (
+                <View key={key} style={styles.field}>
+                  <Text style={styles.fieldLabel}>{label}</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={(newForm as any)[key]}
+                    onChangeText={(v) => setNewForm((p) => ({ ...p, [key]: v }))}
+                    placeholder={placeholder}
+                    placeholderTextColor={COLORS.textMuted}
+                    secureTextEntry={secure}
+                    autoCapitalize="none"
+                  />
+                </View>
+              ))}
+
+              {/* Selector de rol - solo ADMIN */}
+              {isAdmin && (
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Rol *</Text>
+                  <View style={styles.roleRow}>
+                    {['ADMIN', 'SUPERVISOR', 'USER'].map((r) => (
+                      <TouchableOpacity
+                        key={r}
+                        style={[styles.roleOption, newForm.rol === r && styles.roleOptionActive]}
+                        onPress={() => setNewForm((p) => ({ ...p, rol: r, supervisorId: '' }))}
+                      >
+                        <Text style={[styles.roleOptionText, newForm.rol === r && { color: ROLE_COLORS[r] ?? COLORS.primary }]}>
+                          {r}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Selector de supervisor - ADMIN creando USER */}
+              {isAdmin && newForm.rol === 'USER' && (
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Asignar a Supervisor *</Text>
+                  {supervisors.length === 0 ? (
+                    <View style={styles.warnBox}>
+                      <Text style={styles.warnText}>⚠️ No hay supervisores disponibles. Crea un supervisor primero.</Text>
+                    </View>
+                  ) : (
+                    <ScrollView style={styles.supervisorList} showsVerticalScrollIndicator={false}>
+                      {supervisors.map((s) => (
+                        <TouchableOpacity
+                          key={s.id_user}
+                          style={[styles.supervisorOption, newForm.supervisorId === String(s.id_user) && styles.supervisorOptionActive]}
+                          onPress={() => setNewForm((p) => ({ ...p, supervisorId: String(s.id_user) }))}
+                        >
+                          <View style={styles.supAvatar}>
+                            <Text style={styles.supAvatarText}>{s.nombre.charAt(0)}</Text>
+                          </View>
+                          <Text style={[styles.supervisorOptionText, newForm.supervisorId === String(s.id_user) && { color: COLORS.primary }]}>
+                            {s.nombre}
+                          </Text>
+                          {newForm.supervisorId === String(s.id_user) && (
+                            <Text style={{ color: COLORS.primary, fontWeight: '800' }}>✓</Text>
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  )}
+                </View>
+              )}
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowCreate(false)}>
+                  <Text style={styles.cancelText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.saveBtn} onPress={handleCreate} disabled={saving}>
+                  {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Crear usuario</Text>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* EDIT Modal */}
+      <Modal visible={showEdit} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Editar Usuario</Text>
+
+            {[
+              { label: 'Nombre', key: 'nombre' },
+              { label: 'Correo', key: 'correo' },
+              { label: 'Teléfono', key: 'telefono' },
+            ].map(({ label, key }) => (
+              <View key={key} style={styles.field}>
+                <Text style={styles.fieldLabel}>{label}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={(editForm as any)[key]}
+                  onChangeText={(v) => setEditForm((p) => ({ ...p, [key]: v }))}
+                  placeholderTextColor={COLORS.textMuted}
+                  autoCapitalize="none"
+                />
+              </View>
+            ))}
+
+            {/* Solo ADMIN puede cambiar rol */}
+            {isAdmin && (
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>Rol</Text>
+                <View style={styles.roleRow}>
+                  {['ADMIN', 'SUPERVISOR', 'USER'].map((r) => (
+                    <TouchableOpacity
+                      key={r}
+                      style={[styles.roleOption, editForm.rol === r && styles.roleOptionActive]}
+                      onPress={() => setEditForm((p) => ({ ...p, rol: r }))}
+                    >
+                      <Text style={[styles.roleOptionText, editForm.rol === r && { color: ROLE_COLORS[r] ?? COLORS.primary }]}>{r}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.switchRow}>
+              <Text style={styles.fieldLabel}>Usuario activo</Text>
+              <Switch
+                value={editForm.is_active}
+                onValueChange={(v) => setEditForm((p) => ({ ...p, is_active: v }))}
+                trackColor={{ false: COLORS.border, true: COLORS.primary }}
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowEdit(false)}>
+                <Text style={styles.cancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveBtn} onPress={handleEdit} disabled={saving}>
+                {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Guardar</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.bg },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  title: { fontSize: 20, fontWeight: '800', color: COLORS.text },
+  sub: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
+  addBtn: { backgroundColor: COLORS.primary, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },
+  addBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  toolbar: { padding: 16 },
+  search: { backgroundColor: COLORS.bgInput, borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, color: COLORS.text, fontSize: 14 },
+  table: { flex: 1, paddingHorizontal: 16 },
+  tableHeader: { backgroundColor: COLORS.bgCard, borderRadius: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingVertical: 12 },
+  cell: { flex: 1, paddingHorizontal: 8 },
+  cellHeader: { fontSize: 12, color: COLORS.textMuted, fontWeight: '700', textTransform: 'uppercase', paddingVertical: 10 },
+  roleBadge: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
+  roleText: { fontSize: 11, fontWeight: '700' },
+  statusBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
+  statusText: { fontSize: 11, fontWeight: '600' },
+  actionBtn: { backgroundColor: COLORS.bgInput, borderRadius: 6, padding: 6 },
+  actionBtnText: { fontSize: 14 },
+  empty: { color: COLORS.textMuted, textAlign: 'center', paddingVertical: 40, fontSize: 14 },
+  overlay: { flex: 1, backgroundColor: '#00000080' },
+  overlayScroll: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
+  modal: { backgroundColor: COLORS.bgCard, borderRadius: 16, padding: 28, width: 460, borderWidth: 1, borderColor: COLORS.border },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, marginBottom: 16 },
+  infoBox: { backgroundColor: COLORS.primary + '15', borderWidth: 1, borderColor: COLORS.primary + '30', borderRadius: 10, padding: 12, marginBottom: 14 },
+  infoText: { color: COLORS.primary, fontSize: 12, lineHeight: 18 },
+  errorBox: { backgroundColor: '#7f1d1d33', borderWidth: 1, borderColor: COLORS.danger, borderRadius: 10, padding: 12, marginBottom: 14 },
+  errorText: { color: COLORS.danger, fontSize: 13 },
+  warnBox: { backgroundColor: COLORS.warning + '15', borderWidth: 1, borderColor: COLORS.warning + '40', borderRadius: 10, padding: 12 },
+  warnText: { color: COLORS.warning, fontSize: 12 },
+  field: { marginBottom: 14 },
+  fieldLabel: { fontSize: 13, color: COLORS.textSub, marginBottom: 6, fontWeight: '500' },
+  input: { backgroundColor: COLORS.bgInput, borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, color: COLORS.text, fontSize: 14 },
+  roleRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  roleOption: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.bgInput },
+  roleOptionActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary + '15' },
+  roleOptionText: { fontSize: 13, color: COLORS.textMuted, fontWeight: '600' },
+  supervisorList: { maxHeight: 180, backgroundColor: COLORS.bgInput, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border },
+  supervisorOption: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  supervisorOptionActive: { backgroundColor: COLORS.primary + '15' },
+  supervisorOptionText: { flex: 1, fontSize: 13, color: COLORS.textSub },
+  supAvatar: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.primary + '30', alignItems: 'center', justifyContent: 'center' },
+  supAvatarText: { color: COLORS.primary, fontWeight: '700', fontSize: 13 },
+  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalActions: { flexDirection: 'row', gap: 10 },
+  cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
+  cancelText: { color: COLORS.textMuted, fontWeight: '600' },
+  saveBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: COLORS.primary, alignItems: 'center' },
+  saveText: { color: '#fff', fontWeight: '700' },
+});
