@@ -1,0 +1,87 @@
+Documento de Especificaciones: Rastreador
+1. Módulos y Funcionalidades Core
+1.1 Gestión de Usuarios y Acceso
+
+Registro e Inicio de Sesión: Alta de usuarios y acceso seguro mediante JWT.
+
+
+Administración CRUD: Gestión de información personal (nombre, correo, teléfono).
+
+
+Control de Dispositivos: Bloqueo de sesiones de transmisión simultáneas en varios teléfonos para no afectar los reportes de ruta.
+
+
+Roles Definidos: Administrador (control total), Supervisor (monitoreo de asignados), Cliente (visualización de su personal) y Usuario (rastreado).
+
+1.2 Privacidad y Permisos (Móvil)
+
+Consentimiento: Pantallas de aceptación de términos de rastreo.
+
+
+Permisos de SO: Acceso a GPS, incluyendo "Ubicación en segundo plano".
+
+
+Optimización de Batería: Solicitud para evitar que el sistema operativo suspenda la app en segundo plano.
+
+1.3 Inteligencia Territorial y Dashboard
+
+Geocercas: Dibujo de zonas (círculos/polígonos) y motor de detección de entrada/salida en tiempo real.
+
+
+Centro de Mando: Mapa interactivo responsivo con indicadores de estado (movimiento, detenido, sin conexión).
+
+
+Alertas: Notificaciones por geocercas, batería baja o pérdida de señal (Push nativas y Web).
+
+2. Gestión Offline y Resiliencia (Exclusivo App Móvil)
+
+Almacenamiento Local: Base de datos interna para guardar coordenadas cuando no hay internet.
+
+
+Sincronización Automática: Envío en lote de datos acumulados al recuperar conexión, ordenados por hora real de captura.
+
+
+Modo Ahorro: Reducción de frecuencia de actualización si la batería es inferior al 20%.
+
+3. Especificaciones Técnicas
+3.1 Stack Tecnológico
+
+Frontend Web: React (API REST, WebSockets).
+
+
+App Móvil: Expo React Native (Geolocalización, SQLite para offline).
+
+
+Backend: Node.js + Express + JWT + Socket.IO.
+
+
+Base de Datos: Relacional (PostgreSQL/MySQL) con entidades para usuarios, ubicaciones, geocercas y auditoría.
+
+3.2 Lógica del Backend (Puntos Críticos)
+Validar permisos por rol en cada endpoint.
+
+Evitar duplicados de ubicación y procesar eventos offline en lote.
+
+Emitir cambios en tiempo real al dashboard sin recargar la página.
+
+4. Requerimientos de Datos (Ubicación)
+Cada punto de ubicación debe contener:
+
+
+ID / UserID.
+
+
+Coordenadas: Latitud, Longitud y Precisión.
+
+
+Telemetría: Velocidad, nivel de batería y estado de señal.
+
+
+Timestamps: Hora de captura (dispositivo) y hora de recepción (servidor).
+
+5. Reportes y Exportación
+
+Formatos: PDF y Excel.
+
+
+Tipos: Rutas recorridas, tiempos de parada, velocidad promedio e historial de geocercas.

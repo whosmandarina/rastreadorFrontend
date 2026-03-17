@@ -5,6 +5,7 @@ import {
 import { useState } from 'react';
 import { Link, useRouter } from 'expo-router';
 import { authService } from '../../src/services/auth.service';
+import { Ionicons } from '@expo/vector-icons';
 import { validators } from '../../src/utils/validators';
 import { COLORS } from '../../src/constants';
 
@@ -89,8 +90,9 @@ export default function RegisterScreen() {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Link href="/(auth)/login" asChild>
-            <TouchableOpacity>
-              <Text style={styles.backText}>← Volver al login</Text>
+            <TouchableOpacity style={styles.backBtn}>
+              <Ionicons name="arrow-back-outline" size={18} color={COLORS.primary} />
+              <Text style={styles.backText}>Volver al login</Text>
             </TouchableOpacity>
           </Link>
           <Text style={styles.cardTitle}>Crear cuenta</Text>
@@ -211,7 +213,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   scroll: { flexGrow: 1, padding: 24, paddingTop: 60 },
   header: { marginBottom: 24 },
-  backText: { color: COLORS.accent, fontSize: 15, marginBottom: 12 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: COLORS.primary + '15', borderWidth: 1, borderColor: COLORS.primary + '40', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, marginBottom: 16 },
+  backText: { color: COLORS.primary, fontSize: 14, fontWeight: '600' },
   cardTitle: { fontSize: 22, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
   cardSub: { fontSize: 13, color: COLORS.textMuted, lineHeight: 20 },
   card: { backgroundColor: COLORS.bgCard, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: COLORS.border },

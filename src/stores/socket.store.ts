@@ -59,7 +59,12 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       set((state) => ({
         liveUsers: {
           ...state.liveUsers,
-          [data.id_user]: { ...data, status: 'ONLINE' },
+          [data.id_user]: {
+            // Preservar nombre si ya existe, el evento puede no traerlo
+            nombre: state.liveUsers[data.id_user]?.nombre,
+            ...data,
+            status: 'ONLINE',
+          },
         },
       }));
     });

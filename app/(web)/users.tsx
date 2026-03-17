@@ -7,7 +7,21 @@ import { usersService, User } from '../../src/services/users.service';
 import { authService } from '../../src/services/auth.service';
 import { useAuthStore } from '../../src/stores/auth.store';
 import { validators } from '../../src/utils/validators';
+import ConfirmModal from '../../src/components/ConfirmModal';
 import { COLORS } from '../../src/constants';
+import { Ionicons } from '@expo/vector-icons';
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Administrador',
+  SUPERVISOR: 'Supervisor',
+  USER: 'Usuario',
+};
+
+const ROLES = [
+  { value: 'ADMIN',      label: 'Administrador' },
+  { value: 'SUPERVISOR', label: 'Supervisor' },
+  { value: 'USER',       label: 'Usuario' },
+];
 
 const ROLE_COLORS: Record<string, string> = {
   ADMIN: COLORS.danger,
@@ -35,6 +49,7 @@ export default function UsersScreen() {
   const [editForm, setEditForm] = useState(EMPTY_EDIT);
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -143,11 +158,12 @@ export default function UsersScreen() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('¿Eliminar este usuario?')) return;
     try {
       await usersService.delete(id);
+      setConfirmDelete(null);
       load();
     } catch (e: any) {
+      setConfirmDelete(null);
       if (e?.response?.status === 403) {
         alert('Acceso denegado: no puedes eliminar este usuario');
       } else {
@@ -206,7 +222,7 @@ export default function UsersScreen() {
               <Text style={[styles.cell, { flex: 2, color: COLORS.textSub }]} numberOfLines={1}>{u.correo}</Text>
               <View style={styles.cell}>
                 <View style={[styles.roleBadge, { backgroundColor: (ROLE_COLORS[u.rol] ?? COLORS.textMuted) + '20', borderColor: (ROLE_COLORS[u.rol] ?? COLORS.textMuted) + '50' }]}>
-                  <Text style={[styles.roleText, { color: ROLE_COLORS[u.rol] ?? COLORS.textMuted }]}>{u.rol}</Text>
+                  <Text style={[styles.roleText, { color: ROLE_COLORS[u.rol] ?? COLORS.textMuted }]}>{ROLE_LABELS[u.rol] ?? u.rol}</Text>
                 </View>
               </View>
               <View style={styles.cell}>
@@ -218,9 +234,9 @@ export default function UsersScreen() {
               </View>
               <View style={[styles.cell, { flexDirection: 'row', gap: 6 }]}>
                 <TouchableOpacity style={styles.actionBtn} onPress={() => openEdit(u)}>
-                  <Text style={styles.actionBtnText}>✏️</Text>
+                  <Ionicons name='pencil-outline' size={18} color={COLORS.primary} />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: COLORS.danger + '20' }]} onPress={() => handleDelete(u.id_user)}>
+                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: COLORS.danger + '20' }]} onPress={() => setConfirmDelete(u.id_user)}>
                   <Text style={styles.actionBtnText}>🗑</Text>
                 </TouchableOpacity>
               </View>
@@ -247,7 +263,7 @@ export default function UsersScreen() {
               {isSupervisor && (
                 <View style={styles.infoBox}>
                   <Text style={styles.infoText}>
-                    ℹ️ El nuevo usuario quedará automáticamente asignado a tu equipo con rol USER.
+                    ℹ️ El nuevo usuario quedará automáticamente asignado a tu equipo como Usuario.
                   </Text>
                 </View>
               )}
@@ -283,14 +299,14 @@ export default function UsersScreen() {
                 <View style={styles.field}>
                   <Text style={styles.fieldLabel}>Rol *</Text>
                   <View style={styles.roleRow}>
-                    {['ADMIN', 'SUPERVISOR', 'USER'].map((r) => (
+                    {ROLES.map(({ value: r, label: rLabel }) => (
                       <TouchableOpacity
                         key={r}
                         style={[styles.roleOption, newForm.rol === r && styles.roleOptionActive]}
                         onPress={() => setNewForm((p) => ({ ...p, rol: r, supervisorId: '' }))}
                       >
                         <Text style={[styles.roleOptionText, newForm.rol === r && { color: ROLE_COLORS[r] ?? COLORS.primary }]}>
-                          {r}
+                          {rLabel}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -343,6 +359,15 @@ export default function UsersScreen() {
         </View>
       </Modal>
 
+      <ConfirmModal
+        visible={confirmDelete !== null}
+        title="Eliminar usuario"
+        message="¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer."
+        confirmText="Sí, eliminar"
+        onConfirm={() => confirmDelete !== null && handleDelete(confirmDelete)}
+        onCancel={() => setConfirmDelete(null)}
+      />
+
       {/* EDIT Modal */}
       <Modal visible={showEdit} transparent animationType="fade">
         <View style={styles.overlay}>
@@ -371,13 +396,13 @@ export default function UsersScreen() {
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>Rol</Text>
                 <View style={styles.roleRow}>
-                  {['ADMIN', 'SUPERVISOR', 'USER'].map((r) => (
+                  {ROLES.map(({ value: r, label: rLabel }) => (
                     <TouchableOpacity
                       key={r}
                       style={[styles.roleOption, editForm.rol === r && styles.roleOptionActive]}
                       onPress={() => setEditForm((p) => ({ ...p, rol: r }))}
                     >
-                      <Text style={[styles.roleOptionText, editForm.rol === r && { color: ROLE_COLORS[r] ?? COLORS.primary }]}>{r}</Text>
+                      <Text style={[styles.roleOptionText, editForm.rol === r && { color: ROLE_COLORS[r] ?? COLORS.primary }]}>{rLabel}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -426,7 +451,7 @@ const styles = StyleSheet.create({
   roleText: { fontSize: 11, fontWeight: '700' },
   statusBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
   statusText: { fontSize: 11, fontWeight: '600' },
-  actionBtn: { backgroundColor: COLORS.bgInput, borderRadius: 6, padding: 6 },
+  actionBtn: { backgroundColor: COLORS.bgInput, borderRadius: 8, padding: 9 },
   actionBtnText: { fontSize: 14 },
   empty: { color: COLORS.textMuted, textAlign: 'center', paddingVertical: 40, fontSize: 14 },
   overlay: { flex: 1, backgroundColor: '#00000080' },

@@ -8,6 +8,7 @@ export interface Alert {
   is_read: boolean;
   timestamp_alerta: string;
   nombre?: string;
+  usuario_nombre?: string; // campo real del backend (JOIN con Users)
 }
 
 export const alertsService = {

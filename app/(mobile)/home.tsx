@@ -4,19 +4,20 @@ import {
   ScrollView, ActivityIndicator,
 } from 'react-native';
 import { useAuthStore } from '../../src/stores/auth.store';
+import { Ionicons } from '@expo/vector-icons';
 import { useTrackingStore, TrackingStatus } from '../../src/stores/tracking.store';
 import { consentService } from '../../src/services/consent.service';
 import ConsentScreen from '../../src/components/ConsentScreen';
 import { COLORS } from '../../src/constants';
 
 const STATUS_CONFIG: Record<TrackingStatus, { label: string; color: string; icon: string; bg: string }> = {
-  IDLE:          { label: 'Inactivo',               color: COLORS.textMuted, icon: '⏸',  bg: COLORS.bgInput },
-  ACTIVE:        { label: 'Rastreando',             color: COLORS.success,   icon: '📡', bg: COLORS.success + '15' },
-  PAUSED:        { label: 'Pausado',                color: COLORS.warning,   icon: '⏸',  bg: COLORS.warning + '15' },
-  NO_GPS:        { label: 'Sin señal GPS',          color: COLORS.accent,    icon: '📵', bg: COLORS.accent + '15' },
-  NO_INTERNET:   { label: 'Sin internet (offline)', color: COLORS.warning,   icon: '📶', bg: COLORS.warning + '15' },
-  LOW_BATTERY:   { label: 'Batería baja',           color: COLORS.warning,   icon: '🔋', bg: COLORS.warning + '15' },
-  OFFLINE_SAVING:{ label: 'Guardando offline',      color: COLORS.primary,   icon: '💾', bg: COLORS.primary + '15' },
+  IDLE:          { label: 'Inactivo',               color: COLORS.textMuted, icon: 'pause-circle-outline',   bg: COLORS.bgInput },
+  ACTIVE:        { label: 'Rastreando',             color: COLORS.success,   icon: 'radio-outline',          bg: COLORS.success + '15' },
+  PAUSED:        { label: 'Pausado',                color: COLORS.warning,   icon: 'pause-circle-outline',   bg: COLORS.warning + '15' },
+  NO_GPS:        { label: 'Sin señal GPS',          color: COLORS.accent,    icon: 'location-outline',       bg: COLORS.accent + '15' },
+  NO_INTERNET:   { label: 'Sin internet (offline)', color: COLORS.warning,   icon: 'wifi-outline',           bg: COLORS.warning + '15' },
+  LOW_BATTERY:   { label: 'Batería baja',           color: COLORS.warning,   icon: 'battery-dead-outline',   bg: COLORS.warning + '15' },
+  OFFLINE_SAVING:{ label: 'Guardando offline',      color: COLORS.primary,   icon: 'cloud-offline-outline',  bg: COLORS.primary + '15' },
 };
 
 export default function HomeScreen() {
@@ -92,7 +93,7 @@ export default function HomeScreen() {
       </View>
 
       <View style={[styles.statusCard, { backgroundColor: statusCfg.bg, borderColor: statusCfg.color + '40' }]}>
-        <Text style={styles.statusIcon}>{statusCfg.icon}</Text>
+        <Ionicons name={statusCfg.icon as any} size={28} color={statusCfg.color} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.statusLabel, { color: statusCfg.color }]}>{statusCfg.label}</Text>
           {isTracking && lastUpdate && <Text style={styles.statusSub}>Última actualización: {lastUpdateStr}</Text>}
@@ -107,23 +108,23 @@ export default function HomeScreen() {
       >
         {starting ? <ActivityIndicator color="#fff" size="large" /> : (
           <>
-            <Text style={styles.trackBtnIcon}>{isTracking ? '⏹' : '▶'}</Text>
+            <Ionicons name={isTracking ? 'stop-circle' : 'play-circle'} size={40} color='#fff' />
             <Text style={styles.trackBtnText}>{isTracking ? 'Detener rastreo' : 'Iniciar rastreo'}</Text>
           </>
         )}
       </TouchableOpacity>
 
       <View style={styles.grid}>
-        <StatCard icon="🔋" label="Batería" value={battery !== null ? `${battery}%` : '—'} color={battery !== null && battery <= 15 ? COLORS.accent : COLORS.success} />
-        <StatCard icon="🚗" label="Velocidad" value={speed !== null ? `${speed} km/h` : '—'} color={COLORS.primary} />
-        <StatCard icon="🎯" label="Precisión GPS" value={accuracy !== null ? `${Math.round(accuracy)}m` : '—'} color={COLORS.primaryDark} />
-        <StatCard icon="📍" label="Coordenadas" value={currentLocation ? `${currentLocation.latitud.toFixed(4)}, ${currentLocation.longitud.toFixed(4)}` : '—'} color={COLORS.textSub} small />
+        <StatCard icon="battery-half-outline" label="Batería" value={battery !== null ? `${battery}%` : '—'} color={battery !== null && battery <= 15 ? COLORS.accent : COLORS.success} />
+        <StatCard icon="speedometer-outline" label="Velocidad" value={speed !== null ? `${speed} km/h` : '—'} color={COLORS.primary} />
+        <StatCard icon="locate-outline" label="Precisión GPS" value={accuracy !== null ? `${Math.round(accuracy)}m` : '—'} color={COLORS.primaryDark} />
+        <StatCard icon="location-outline" label="Coordenadas" value={currentLocation ? `${currentLocation.latitud.toFixed(4)}, ${currentLocation.longitud.toFixed(4)}` : '—'} color={COLORS.textSub} small />
       </View>
 
       {pendingCount > 0 && (
         <View style={styles.offlineCard}>
           <View style={styles.offlineLeft}>
-            <Text style={styles.offlineIcon}>💾</Text>
+            <Ionicons name='cloud-offline-outline' size={22} color={COLORS.primary} />
             <View>
               <Text style={styles.offlineTitle}>{pendingCount} ubicaciones pendientes</Text>
               <Text style={styles.offlineSub}>Se sincronizarán cuando haya conexión</Text>
@@ -147,7 +148,7 @@ export default function HomeScreen() {
 function StatCard({ icon, label, value, color, small }: any) {
   return (
     <View style={[styles.statCard, small && styles.statCardWide]}>
-      <Text style={styles.statIcon}>{icon}</Text>
+      <Ionicons name={icon} size={22} color={color} />
       <Text style={[styles.statValue, { color, fontSize: small ? 12 : 18 }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -164,24 +165,20 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 20, fontWeight: '800', color: COLORS.text },
   greetingSub: { fontSize: 13, color: COLORS.textMuted },
   statusCard: { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 14, padding: 16, borderWidth: 1 },
-  statusIcon: { fontSize: 28 },
   statusLabel: { fontSize: 16, fontWeight: '700' },
   statusSub: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
   activeDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.success },
   trackBtn: { borderRadius: 20, paddingVertical: 28, alignItems: 'center', justifyContent: 'center', gap: 8 },
   trackBtnStart: { backgroundColor: COLORS.primary },
   trackBtnStop: { backgroundColor: COLORS.accent },
-  trackBtnIcon: { fontSize: 36 },
   trackBtnText: { fontSize: 18, fontWeight: '800', color: '#fff' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   statCard: { flex: 1, minWidth: '45%', backgroundColor: COLORS.bgCard, borderRadius: 14, padding: 16, alignItems: 'center', gap: 4, borderWidth: 1, borderColor: COLORS.border },
   statCardWide: { minWidth: '100%' },
-  statIcon: { fontSize: 22 },
   statValue: { fontWeight: '800' },
   statLabel: { fontSize: 11, color: COLORS.textMuted, textAlign: 'center' },
   offlineCard: { backgroundColor: COLORS.primary + '15', borderWidth: 1, borderColor: COLORS.primary + '40', borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   offlineLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  offlineIcon: { fontSize: 22 },
   offlineTitle: { fontSize: 13, fontWeight: '700', color: COLORS.primary },
   offlineSub: { fontSize: 11, color: COLORS.textMuted },
   syncBtn: { backgroundColor: COLORS.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },

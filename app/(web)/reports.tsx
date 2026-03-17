@@ -160,7 +160,7 @@ export default function ReportsScreen() {
                         <Text style={styles.paradaTime}>
                           {new Date(p.start).toLocaleString('es-MX')} → {new Date(p.end).toLocaleString('es-MX')}
                         </Text>
-                        <Text style={styles.paradaDur}>{p.duracion_minutos} min · {p.lat?.toFixed(4)}, {p.lng?.toFixed(4)}</Text>
+                        <Text style={styles.paradaDur}>{p.duracion_minutos} min · {parseFloat(p.lat || 0).toFixed(4)}, {parseFloat(p.lng || 0).toFixed(4)}</Text>
                       </View>
                     </View>
                   ))}

@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useAuthStore } from '../../src/stores/auth.store';
+import { Ionicons } from '@expo/vector-icons';
 import { useTrackingStore } from '../../src/stores/tracking.store';
 import { COLORS } from '../../src/constants';
 
@@ -37,7 +38,7 @@ export default function ProfileScreen() {
       {/* Tracking warning */}
       {isTracking && (
         <View style={styles.trackingBanner}>
-          <Text style={styles.trackingBannerIcon}>📡</Text>
+          <Ionicons name='radio-outline' size={20} color={COLORS.success} />
           <Text style={styles.trackingBannerText}>
             El rastreo está activo. Se detendrá automáticamente al cerrar sesión.
           </Text>
@@ -77,7 +78,6 @@ const styles = StyleSheet.create({
   rowLabel: { fontSize: 14, color: COLORS.textMuted },
   rowValue: { fontSize: 14, color: COLORS.text, fontWeight: '600' },
   trackingBanner: { backgroundColor: COLORS.success + '15', borderRadius: 12, padding: 14, flexDirection: 'row', gap: 10, borderWidth: 1, borderColor: COLORS.success + '30' },
-  trackingBannerIcon: { fontSize: 20 },
   trackingBannerText: { flex: 1, fontSize: 13, color: COLORS.success, lineHeight: 20 },
   logoutBtn: { backgroundColor: COLORS.danger + '15', borderWidth: 1, borderColor: COLORS.danger + '40', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   logoutText: { color: COLORS.danger, fontSize: 16, fontWeight: '700' },

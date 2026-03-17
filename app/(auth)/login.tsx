@@ -5,6 +5,7 @@ import {
 import { useState } from 'react';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../../src/stores/auth.store';
+import { Ionicons } from '@expo/vector-icons';
 import { validators } from '../../src/utils/validators';
 import { COLORS } from '../../src/constants';
 
@@ -96,7 +97,7 @@ export default function LoginScreen() {
                 autoComplete="password"
               />
               <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPass(!showPass)}>
-                <Text style={styles.eyeText}>{showPass ? '🙈' : '👁'}</Text>
+                <Ionicons name={showPass ? 'eye-off-outline' : 'eye-outline'} size={20} color={COLORS.textMuted} />
               </TouchableOpacity>
             </View>
             {errors.password && <Text style={styles.fieldError}>⚠️ {errors.password}</Text>}
@@ -157,7 +158,6 @@ const styles = StyleSheet.create({
   inputError: { borderColor: COLORS.danger },
   fieldError: { color: COLORS.danger, fontSize: 12, marginTop: 5 },
   eyeBtn: { padding: 10 },
-  eyeText: { fontSize: 18 },
   btn: { backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 15, alignItems: 'center', marginBottom: 16 },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.5 },

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
+import { Ionicons } from '@expo/vector-icons';
 import * as Battery from 'expo-battery';
 import { useTrackingStore } from '../../src/stores/tracking.store';
 import { COLORS, BATTERY_LOW_THRESHOLD } from '../../src/constants';
@@ -42,7 +43,10 @@ export default function StatusScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Estado del dispositivo</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <Ionicons name='pulse-outline' size={24} color={COLORS.primary} />
+        <Text style={styles.title}>Estado del dispositivo</Text>
+      </View>
 
       {/* Tracking */}
       <Section title="Rastreo">
@@ -86,7 +90,7 @@ export default function StatusScreen() {
               onPress={handleSync}
               disabled={!isOnline || syncing}
             >
-              <Text style={styles.syncText}>{syncing ? 'Sincronizando...' : '🔄 Sincronizar ahora'}</Text>
+              <Text style={styles.syncText}>{syncing ? 'Sincronizando...' : 'Sincronizar ahora'}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -119,7 +123,7 @@ function Row({ label, value, valueColor }: { label: string; value: string; value
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   content: { padding: 20, paddingTop: 60, gap: 4, paddingBottom: 40 },
-  title: { fontSize: 22, fontWeight: '800', color: COLORS.text, marginBottom: 16 },
+  title: { fontSize: 22, fontWeight: '800', color: COLORS.text },
   section: { marginBottom: 16 },
   sectionTitle: { fontSize: 12, fontWeight: '800', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, paddingHorizontal: 4 },
   sectionCard: { backgroundColor: COLORS.bgCard, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },

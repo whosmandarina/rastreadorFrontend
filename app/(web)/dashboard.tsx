@@ -7,6 +7,14 @@ import { useSocketStore, LiveUser } from '../../src/stores/socket.store';
 import { usersService, User } from '../../src/services/users.service';
 import { geofencesService, Geofence } from '../../src/services/geofences.service';
 import { useAuthStore } from '../../src/stores/auth.store';
+import { Ionicons } from '@expo/vector-icons';
+import ConfirmModal from '../../src/components/ConfirmModal';
+
+const ROL_ES: Record<string, string> = {
+  ADMIN: 'Administrador',
+  SUPERVISOR: 'Supervisor',
+  USER: 'Usuario',
+};
 import { COLORS } from '../../src/constants';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -77,7 +85,11 @@ export default function DashboardScreen() {
   const [showGeoModal, setShowGeoModal] = useState(false);
   const [editingGeo, setEditingGeo] = useState<Geofence | null>(null);
   const [geoForm, setGeoForm] = useState({ nombre: '', tipo: 'CIRCLE' as 'CIRCLE' | 'POLYGON', lat: '', lng: '', radio: '150' });
+  const [polyPoints, setPolyPoints] = useState<{ lat: string; lng: string }[]>([
+    { lat: '', lng: '' }, { lat: '', lng: '' }, { lat: '', lng: '' }
+  ]);
   const [savingGeo, setSavingGeo] = useState(false);
+  const [confirmDeleteGeo, setConfirmDeleteGeo] = useState<number | null>(null);
 
   const loadData = () => {
     setLoading(true);
@@ -86,36 +98,81 @@ export default function DashboardScreen() {
   };
   useEffect(() => { loadData(); }, []);
 
-  const liveList = Object.values(liveUsers);
+  // Enriquecer liveUsers con nombres de la BD para mostrar en el mapa
+  const liveList = Object.values(liveUsers).map((lu) => {
+    const dbUser = users.find((u) => u.id_user === lu.id_user);
+    return { ...lu, nombre: dbUser?.nombre ?? lu.nombre ?? `Usuario ${lu.id_user}` };
+  });
+
   const enriched = users
     .filter((u) => u.nombre?.toLowerCase().includes(search.toLowerCase()) || u.correo?.toLowerCase().includes(search.toLowerCase()))
     .map((u) => ({ ...u, live: liveUsers[u.id_user] }));
 
+  // Key única que cambia con cada nueva ubicación para forzar recarga del iframe
+  const mapKey = liveList.map((u) => `${u.id_user}:${u.latitud}:${u.longitud}:${u.status}`).join('|')
+    + '|' + geofences.map((g) => g.id_geofence).join(',');
+
   const html = buildLeafletHTML(liveList, geofences);
 
-  const openCreateGeo = () => { setGeoForm({ nombre: '', tipo: 'CIRCLE', lat: '', lng: '', radio: '150' }); setEditingGeo(null); setShowGeoModal(true); };
+  const openCreateGeo = () => {
+    setGeoForm({ nombre: '', tipo: 'CIRCLE', lat: '', lng: '', radio: '150' });
+    setPolyPoints([{ lat: '', lng: '' }, { lat: '', lng: '' }, { lat: '', lng: '' }]);
+    setEditingGeo(null);
+    setShowGeoModal(true);
+  };
   const openEditGeo = (g: Geofence) => {
-    const c = g.tipo === 'CIRCLE' ? g.coordenadas : g.coordenadas?.[0] ?? {};
-    setGeoForm({ nombre: g.nombre, tipo: g.tipo, lat: String(c?.lat ?? ''), lng: String(c?.lng ?? ''), radio: String(g.radio ?? 150) });
-    setEditingGeo(g); setShowGeoModal(true);
+    if (g.tipo === 'CIRCLE') {
+      const c = g.coordenadas;
+      setGeoForm({ nombre: g.nombre, tipo: 'CIRCLE', lat: String(c?.lat ?? ''), lng: String(c?.lng ?? ''), radio: String(g.radio ?? 150) });
+      setPolyPoints([{ lat: '', lng: '' }, { lat: '', lng: '' }, { lat: '', lng: '' }]);
+    } else {
+      const pts = Array.isArray(g.coordenadas) ? g.coordenadas : [];
+      setGeoForm({ nombre: g.nombre, tipo: 'POLYGON', lat: '', lng: '', radio: '150' });
+      setPolyPoints(pts.length >= 3 ? pts.map((p: any) => ({ lat: String(p.lat ?? ''), lng: String(p.lng ?? '') })) : [{ lat: '', lng: '' }, { lat: '', lng: '' }, { lat: '', lng: '' }]);
+    }
+    setEditingGeo(g);
+    setShowGeoModal(true);
   };
   const saveGeo = async () => {
+    if (!geoForm.nombre.trim()) { alert('El nombre es obligatorio'); return; }
+    if (geoForm.tipo === 'CIRCLE') {
+      if (!geoForm.lat || !geoForm.lng) { alert('Ingresa latitud y longitud'); return; }
+    } else {
+      const valid = polyPoints.filter(p => p.lat.trim() && p.lng.trim());
+      if (valid.length < 3) { alert('Un polígono necesita mínimo 3 puntos con coordenadas'); return; }
+    }
     setSavingGeo(true);
     try {
+      let coordenadas: any;
+      if (geoForm.tipo === 'CIRCLE') {
+        coordenadas = { lat: parseFloat(geoForm.lat), lng: parseFloat(geoForm.lng) };
+      } else {
+        coordenadas = polyPoints
+          .filter(p => p.lat.trim() && p.lng.trim())
+          .map(p => ({ lat: parseFloat(p.lat), lng: parseFloat(p.lng) }));
+      }
       const payload: any = {
-        nombre: geoForm.nombre, tipo: geoForm.tipo,
-        coordenadas: geoForm.tipo === 'CIRCLE' ? { lat: parseFloat(geoForm.lat), lng: parseFloat(geoForm.lng) } : [{ lat: parseFloat(geoForm.lat), lng: parseFloat(geoForm.lng) }],
+        nombre: geoForm.nombre.trim(),
+        tipo: geoForm.tipo,
+        coordenadas,
         radio: geoForm.tipo === 'CIRCLE' ? parseFloat(geoForm.radio) : undefined,
       };
       if (editingGeo) await geofencesService.update(editingGeo.id_geofence, payload);
       else await geofencesService.create(payload);
-      setShowGeoModal(false); loadData();
+      setShowGeoModal(false);
+      loadData();
     } catch (e: any) { alert(e?.response?.data?.message || 'Error al guardar'); }
     finally { setSavingGeo(false); }
   };
   const deleteGeo = async (id: number) => {
-    if (!confirm('¿Eliminar esta geocerca?')) return;
-    await geofencesService.delete(id); loadData();
+    try {
+      await geofencesService.delete(id);
+      setConfirmDeleteGeo(null);
+      loadData();
+    } catch (e: any) {
+      setConfirmDeleteGeo(null);
+      alert(e?.response?.data?.message || 'No se pudo eliminar');
+    }
   };
 
   return (
@@ -141,7 +198,7 @@ export default function DashboardScreen() {
       <View style={styles.body}>
         <View style={styles.mapContainer}>
           {Platform.OS === 'web' ? (
-            <iframe key={JSON.stringify(geofences) + JSON.stringify(liveList)} srcDoc={html}
+            <iframe key={mapKey} srcDoc={html}
               style={{ width: '100%', height: '100%', border: 'none', borderRadius: 12 } as any} title="mapa" />
           ) : (
             <View style={{ flex: 1, backgroundColor: COLORS.bgInput, alignItems: 'center', justifyContent: 'center' }}>
@@ -180,19 +237,19 @@ export default function DashboardScreen() {
                 {geofences.map((g) => (
                   <View key={g.id_geofence} style={styles.geoCard}>
                     <View style={styles.geoCardLeft}>
-                      <Text style={styles.geoCardIcon}>{g.tipo === 'CIRCLE' ? '⭕' : '🔷'}</Text>
+                      <Ionicons name={g.tipo === 'CIRCLE' ? 'radio-button-on-outline' : 'shapes-outline'} size={20} color={COLORS.primary} />
                       <View style={{ flex: 1 }}>
                         <Text style={styles.geoCardName} numberOfLines={1}>{g.nombre}</Text>
-                        <Text style={styles.geoCardMeta}>{g.tipo}{g.radio ? ` · ${g.radio}m` : ''}</Text>
+                        <Text style={styles.geoCardMeta}>{g.tipo === 'CIRCLE' ? 'Círculo' : 'Polígono'}{g.radio ? ` · ${g.radio}m` : ''}</Text>
                       </View>
                     </View>
                     <View style={styles.geoCardActions}>
                       <TouchableOpacity style={styles.geoActionBtn} onPress={() => openEditGeo(g)}><Text>✏️</Text></TouchableOpacity>
-                      <TouchableOpacity style={[styles.geoActionBtn, { backgroundColor: COLORS.accent + '20' }]} onPress={() => deleteGeo(g.id_geofence)}><Text>🗑</Text></TouchableOpacity>
+                      <TouchableOpacity style={[styles.geoActionBtn, { backgroundColor: COLORS.accent + '20' }]} onPress={() => setConfirmDeleteGeo(g.id_geofence)}><Text>🗑</Text></TouchableOpacity>
                     </View>
                   </View>
                 ))}
-                {geofences.length === 0 && <View style={styles.emptyGeo}><Text style={styles.emptyGeoIcon}>📍</Text><Text style={styles.emptyGeoText}>Sin geocercas. Crea una para comenzar.</Text></View>}
+                {geofences.length === 0 && <View style={styles.emptyGeo}><Ionicons name='location-outline' size={36} color={COLORS.textMuted} /><Text style={styles.emptyGeoText}>Sin geocercas. Crea una para comenzar.</Text></View>}
               </ScrollView>
             </>
           ) : (
@@ -209,7 +266,7 @@ export default function DashboardScreen() {
                           <View style={[styles.userDot, { backgroundColor: STATUS_COLORS[status] }]} />
                           <View style={{ flex: 1 }}>
                             <Text style={styles.userName} numberOfLines={1}>{u.nombre}</Text>
-                            <Text style={styles.userMeta}>{u.rol}</Text>
+                            <Text style={styles.userMeta}>{ROL_ES[u.rol] ?? u.rol}</Text>
                           </View>
                         </View>
                         <Text style={[styles.userStatus, { color: STATUS_COLORS[status] }]}>{STATUS_LABELS[status]}</Text>
@@ -232,30 +289,115 @@ export default function DashboardScreen() {
         </View>
       </View>
 
+      <ConfirmModal
+        visible={confirmDeleteGeo !== null}
+        title="Eliminar geocerca"
+        message="¿Estás seguro de que deseas eliminar esta geocerca?"
+        confirmText="Sí, eliminar"
+        onConfirm={() => confirmDeleteGeo !== null && deleteGeo(confirmDeleteGeo)}
+        onCancel={() => setConfirmDeleteGeo(null)}
+      />
+
       <Modal visible={showGeoModal} transparent animationType="fade">
         <View style={styles.overlay}>
           <View style={styles.modal}>
             <Text style={styles.modalTitle}>{editingGeo ? 'Editar' : 'Nueva'} Geocerca</Text>
-            {[['Nombre', 'nombre', 'Zona Planta', 'default'], ['Latitud', 'lat', '19.2433', 'numeric'], ['Longitud', 'lng', '-103.7247', 'numeric']].map(([label, key, ph, kb]: any) => (
-              <View key={key} style={styles.mfield}>
-                <Text style={styles.mfieldLabel}>{label}</Text>
-                <TextInput style={styles.minput} value={(geoForm as any)[key]} onChangeText={(v) => setGeoForm((p) => ({ ...p, [key]: v }))} placeholder={ph} placeholderTextColor={COLORS.textMuted} keyboardType={kb} />
-              </View>
-            ))}
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            {/* Nombre */}
+            <View style={styles.mfield}>
+              <Text style={styles.mfieldLabel}>Nombre *</Text>
+              <TextInput style={styles.minput} value={geoForm.nombre} onChangeText={(v) => setGeoForm((p) => ({ ...p, nombre: v }))} placeholder="Zona Planta Norte" placeholderTextColor={COLORS.textMuted} />
+            </View>
+
+            {/* Tipo */}
             <View style={styles.mfield}>
               <Text style={styles.mfieldLabel}>Tipo</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {(['CIRCLE', 'POLYGON'] as const).map((t) => (
-                  <TouchableOpacity key={t} style={[styles.typeBtn, geoForm.tipo === t && styles.typeBtnActive]} onPress={() => setGeoForm((p) => ({ ...p, tipo: t }))}>
-                    <Text style={[styles.typeBtnText, geoForm.tipo === t && { color: COLORS.primary }]}>{t === 'CIRCLE' ? '⭕ Círculo' : '🔷 Polígono'}</Text>
+                  <TouchableOpacity key={t} style={[styles.typeBtn, geoForm.tipo === t && styles.typeBtnActive]}
+                    onPress={() => { setGeoForm((p) => ({ ...p, tipo: t })); }}>
+                    <Text style={[styles.typeBtnText, geoForm.tipo === t && { color: COLORS.primary }]}>
+                      {t === 'CIRCLE' ? '⭕ Círculo' : '🔷 Polígono'}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
+
+            {/* CÍRCULO */}
             {geoForm.tipo === 'CIRCLE' && (
+              <>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={[styles.mfield, { flex: 1 }]}>
+                    <Text style={styles.mfieldLabel}>Latitud *</Text>
+                    <TextInput style={styles.minput} value={geoForm.lat} onChangeText={(v) => setGeoForm((p) => ({ ...p, lat: v }))} placeholder="19.2433" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" />
+                  </View>
+                  <View style={[styles.mfield, { flex: 1 }]}>
+                    <Text style={styles.mfieldLabel}>Longitud *</Text>
+                    <TextInput style={styles.minput} value={geoForm.lng} onChangeText={(v) => setGeoForm((p) => ({ ...p, lng: v }))} placeholder="-103.7247" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" />
+                  </View>
+                </View>
+                <View style={styles.mfield}>
+                  <Text style={styles.mfieldLabel}>Radio (metros) *</Text>
+                  <TextInput style={styles.minput} value={geoForm.radio} onChangeText={(v) => setGeoForm((p) => ({ ...p, radio: v }))} placeholder="150" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" />
+                </View>
+              </>
+            )}
+
+            {/* POLÍGONO */}
+            {geoForm.tipo === 'POLYGON' && (
               <View style={styles.mfield}>
-                <Text style={styles.mfieldLabel}>Radio (metros)</Text>
-                <TextInput style={styles.minput} value={geoForm.radio} onChangeText={(v) => setGeoForm((p) => ({ ...p, radio: v }))} placeholder="150" placeholderTextColor={COLORS.textMuted} keyboardType="numeric" />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={styles.mfieldLabel}>Puntos del polígono * (mínimo 3)</Text>
+                  <TouchableOpacity
+                    style={{ backgroundColor: COLORS.primary, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 }}
+                    onPress={() => setPolyPoints((p) => [...p, { lat: '', lng: '' }])}
+                  >
+                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>+ Agregar punto</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+                  <Text style={[styles.mfieldLabel, { flex: 1, textAlign: 'center' }]}>#</Text>
+                  <Text style={[styles.mfieldLabel, { flex: 3, textAlign: 'center' }]}>Latitud</Text>
+                  <Text style={[styles.mfieldLabel, { flex: 3, textAlign: 'center' }]}>Longitud</Text>
+                  <View style={{ width: 28 }} />
+                </View>
+                {polyPoints.map((pt, i) => (
+                  <View key={i} style={{ flexDirection: 'row', gap: 6, marginBottom: 6, alignItems: 'center' }}>
+                    <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{i + 1}</Text>
+                    </View>
+                    <TextInput
+                      style={[styles.minput, { flex: 1 }]}
+                      value={pt.lat}
+                      onChangeText={(v) => setPolyPoints((prev) => prev.map((p, idx) => idx === i ? { ...p, lat: v } : p))}
+                      placeholder="19.2433"
+                      placeholderTextColor={COLORS.textMuted}
+                      keyboardType="numeric"
+                    />
+                    <TextInput
+                      style={[styles.minput, { flex: 1 }]}
+                      value={pt.lng}
+                      onChangeText={(v) => setPolyPoints((prev) => prev.map((p, idx) => idx === i ? { ...p, lng: v } : p))}
+                      placeholder="-103.7247"
+                      placeholderTextColor={COLORS.textMuted}
+                      keyboardType="numeric"
+                    />
+                    {polyPoints.length > 3 && (
+                      <TouchableOpacity
+                        style={{ backgroundColor: COLORS.danger + '20', borderRadius: 6, padding: 4 }}
+                        onPress={() => setPolyPoints((prev) => prev.filter((_, idx) => idx !== i))}
+                      >
+                        <Text style={{ color: COLORS.danger, fontSize: 14 }}>✕</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))}
+                <View style={{ backgroundColor: COLORS.bgInput, borderRadius: 8, padding: 10, marginTop: 4 }}>
+                  <Text style={{ fontSize: 11, color: COLORS.textMuted, lineHeight: 16 }}>
+                    💡 Ingresa las coordenadas de cada vértice del polígono en orden. Puedes obtenerlas desde Google Maps haciendo clic derecho → "¿Qué hay aquí?".
+                  </Text>
+                </View>
               </View>
             )}
             <View style={styles.modalActions}>
@@ -264,6 +406,7 @@ export default function DashboardScreen() {
                 {savingGeo ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Guardar</Text>}
               </TouchableOpacity>
             </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -304,13 +447,11 @@ const styles = StyleSheet.create({
   search: { backgroundColor: COLORS.bgInput, borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, color: COLORS.text, fontSize: 14 },
   geoCard: { backgroundColor: COLORS.bgCard, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   geoCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  geoCardIcon: { fontSize: 18 },
   geoCardName: { fontSize: 13, color: COLORS.text, fontWeight: '600' },
   geoCardMeta: { fontSize: 11, color: COLORS.textMuted },
   geoCardActions: { flexDirection: 'row', gap: 4 },
   geoActionBtn: { backgroundColor: COLORS.bgInput, borderRadius: 6, padding: 5 },
   emptyGeo: { alignItems: 'center', paddingVertical: 32, gap: 8 },
-  emptyGeoIcon: { fontSize: 36 },
   emptyGeoText: { color: COLORS.textMuted, fontSize: 13, textAlign: 'center' },
   userCard: { backgroundColor: COLORS.bgCard, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   userCardActive: { borderColor: COLORS.primary },
@@ -326,7 +467,7 @@ const styles = StyleSheet.create({
   detailLabel: { fontSize: 12, color: COLORS.textMuted },
   detailValue: { fontSize: 12, color: COLORS.text, fontWeight: '600' },
   overlay: { flex: 1, backgroundColor: '#02182b80', alignItems: 'center', justifyContent: 'center' },
-  modal: { backgroundColor: COLORS.bgCard, borderRadius: 16, padding: 28, width: 400, borderWidth: 1, borderColor: COLORS.border },
+  modal: { backgroundColor: COLORS.bgCard, borderRadius: 16, padding: 24, width: 460, maxWidth: '95%', maxHeight: '85vh' as any, borderWidth: 1, borderColor: COLORS.border },
   modalTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, marginBottom: 20 },
   mfield: { marginBottom: 14 },
   mfieldLabel: { fontSize: 13, color: COLORS.textSub, marginBottom: 5, fontWeight: '500' },

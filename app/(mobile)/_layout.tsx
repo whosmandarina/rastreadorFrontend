@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { COLORS } from '../../src/constants';
-import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function MobileLayout() {
   return (
@@ -20,10 +20,10 @@ export default function MobileLayout() {
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}
     >
-      <Tabs.Screen name="home" options={{ title: 'Rastreo', tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📡</Text> }} />
-      <Tabs.Screen name="map" options={{ title: 'Mi Mapa', tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🗺</Text> }} />
-      <Tabs.Screen name="status" options={{ title: 'Estado', tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📊</Text> }} />
-      <Tabs.Screen name="profile" options={{ title: 'Perfil', tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>👤</Text> }} />
+      <Tabs.Screen name="home" options={{ title: 'Rastreo', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'radio' : 'radio-outline'} size={22} color={color} /> }} />
+      <Tabs.Screen name="map" options={{ title: 'Mi Mapa', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'map' : 'map-outline'} size={22} color={color} /> }} />
+      <Tabs.Screen name="status" options={{ title: 'Estado', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline'} size={22} color={color} /> }} />
+      <Tabs.Screen name="profile" options={{ title: 'Perfil', tabBarIcon: ({ color, focused }) => <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color} /> }} />
     </Tabs>
   );
 }
