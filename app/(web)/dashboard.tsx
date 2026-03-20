@@ -80,6 +80,8 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
+  const [filterRol, setFilterRol] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const isAdmin = currentUser?.rol === 'ADMIN';
   const [showGeoPanel, setShowGeoPanel] = useState(false);
   const [showGeoModal, setShowGeoModal] = useState(false);
@@ -105,7 +107,11 @@ export default function DashboardScreen() {
   });
 
   const enriched = users
-    .filter((u) => u.nombre?.toLowerCase().includes(search.toLowerCase()) || u.correo?.toLowerCase().includes(search.toLowerCase()))
+    .filter((u) => {
+      const matchSearch = u.nombre?.toLowerCase().includes(search.toLowerCase()) || u.correo?.toLowerCase().includes(search.toLowerCase());
+      const matchRol = filterRol ? u.rol === filterRol : true;
+      return matchSearch && matchRol;
+    })
     .map((u) => ({ ...u, live: liveUsers[u.id_user] }));
 
   // Key única que cambia con cada nueva ubicación para forzar recarga del iframe
@@ -256,6 +262,42 @@ export default function DashboardScreen() {
             <>
               <Text style={styles.panelTitle}>Usuarios</Text>
               <TextInput style={styles.search} placeholder="Buscar..." placeholderTextColor={COLORS.textMuted} value={search} onChangeText={setSearch} />
+              <View style={styles.dashDropdownWrap}>
+                <TouchableOpacity
+                  style={styles.dashDropdownBtn}
+                  onPress={() => setDropdownOpen(!dropdownOpen)}
+                >
+                  <Ionicons name="people-outline" size={15} color={COLORS.textMuted} />
+                  <Text style={styles.dashDropdownBtnText}>
+                    {filterRol === '' ? 'Todos los roles'
+                      : filterRol === 'ADMIN' ? 'Administrador'
+                      : filterRol === 'SUPERVISOR' ? 'Supervisor'
+                      : 'Usuario'}
+                  </Text>
+                  <Ionicons name={dropdownOpen ? 'chevron-up' : 'chevron-down'} size={14} color={COLORS.textMuted} />
+                </TouchableOpacity>
+                {dropdownOpen && (
+                  <View style={styles.dashDropdownMenu}>
+                    {[
+                      { value: '', label: 'Todos los roles' },
+                      { value: 'ADMIN', label: 'Administrador' },
+                      { value: 'SUPERVISOR', label: 'Supervisor' },
+                      { value: 'USER', label: 'Usuario' },
+                    ].map((r) => (
+                      <TouchableOpacity
+                        key={r.value}
+                        style={[styles.dashDropdownItem, filterRol === r.value && styles.dashDropdownItemActive]}
+                        onPress={() => { setFilterRol(r.value); setDropdownOpen(false); }}
+                      >
+                        {filterRol === r.value && <Ionicons name="checkmark" size={13} color={COLORS.primary} />}
+                        <Text style={[styles.dashDropdownItemText, filterRol === r.value && { color: COLORS.primary, fontWeight: '700' }]}>
+                          {r.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
               {loading ? <ActivityIndicator color={COLORS.primary} style={{ marginTop: 20 }} /> : (
                 <ScrollView showsVerticalScrollIndicator={false}>
                   {enriched.map((u) => {
@@ -445,6 +487,13 @@ const styles = StyleSheet.create({
   addBtn: { backgroundColor: COLORS.primary, borderRadius: 8, width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
   addBtnText: { color: '#fff', fontWeight: '800', fontSize: 18 },
   search: { backgroundColor: COLORS.bgInput, borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, color: COLORS.text, fontSize: 14 },
+  dashDropdownWrap: { position: 'relative' as any, zIndex: 100 },
+  dashDropdownBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.bgCard, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
+  dashDropdownBtnText: { flex: 1, fontSize: 13, color: COLORS.text, fontWeight: '500' },
+  dashDropdownMenu: { position: 'absolute' as any, top: 40, left: 0, right: 0, backgroundColor: COLORS.bgCard, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 8, zIndex: 200, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 8 },
+  dashDropdownItem: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  dashDropdownItemActive: { backgroundColor: COLORS.primary + '12' },
+  dashDropdownItemText: { fontSize: 13, color: COLORS.textSub },
   geoCard: { backgroundColor: COLORS.bgCard, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   geoCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   geoCardName: { fontSize: 13, color: COLORS.text, fontWeight: '600' },

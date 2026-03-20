@@ -41,6 +41,8 @@ export default function UsersScreen() {
   const [supervisors, setSupervisors] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [filterRol, setFilterRol] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -172,12 +174,13 @@ export default function UsersScreen() {
     }
   };
 
-  const filtered = users.filter(
-    (u) =>
+  const filtered = users.filter((u) => {
+    const matchSearch =
       u.nombre?.toLowerCase().includes(search.toLowerCase()) ||
-      u.correo?.toLowerCase().includes(search.toLowerCase()) ||
-      u.rol?.toLowerCase().includes(search.toLowerCase())
-  );
+      u.correo?.toLowerCase().includes(search.toLowerCase());
+    const matchRol = filterRol ? u.rol === filterRol : true;
+    return matchSearch && matchRol;
+  });
 
   return (
     <View style={styles.container}>
@@ -199,11 +202,34 @@ export default function UsersScreen() {
       <View style={styles.toolbar}>
         <TextInput
           style={styles.search}
-          placeholder="Buscar por nombre, correo o rol..."
+          placeholder="Buscar por nombre o correo..."
           placeholderTextColor={COLORS.textMuted}
           value={search}
           onChangeText={setSearch}
         />
+        <View style={styles.filterRow}>
+          <Text style={styles.filterLabel}>Filtrar por rol:</Text>
+          <select
+            value={filterRol}
+            onChange={(e: any) => setFilterRol(e.target.value)}
+            style={{
+              backgroundColor: '#ffffff',
+              border: `1.5px solid ${COLORS.border}`,
+              borderRadius: 10,
+              padding: '10px 14px',
+              fontSize: 15,
+              color: COLORS.text,
+              outline: 'none',
+              cursor: 'pointer',
+              minWidth: 200,
+            } as any}
+          >
+            <option value="">Todos los roles</option>
+            <option value="ADMIN">Administrador</option>
+            <option value="SUPERVISOR">Supervisor</option>
+            <option value="USER">Usuario</option>
+          </select>
+        </View>
       </View>
 
       {loading ? (
@@ -371,6 +397,7 @@ export default function UsersScreen() {
       {/* EDIT Modal */}
       <Modal visible={showEdit} transparent animationType="fade">
         <View style={styles.overlay}>
+          <ScrollView contentContainerStyle={styles.overlayScroll} keyboardShouldPersistTaps="handled">
           <View style={styles.modal}>
             <Text style={styles.modalTitle}>Editar Usuario</Text>
 
@@ -427,6 +454,7 @@ export default function UsersScreen() {
               </TouchableOpacity>
             </View>
           </View>
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -440,8 +468,10 @@ const styles = StyleSheet.create({
   sub: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
   addBtn: { backgroundColor: COLORS.primary, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },
   addBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  toolbar: { padding: 16 },
-  search: { backgroundColor: COLORS.bgInput, borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, color: COLORS.text, fontSize: 14 },
+  toolbar: { padding: 16, gap: 12 },
+  search: { backgroundColor: COLORS.bgInput, borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, color: COLORS.text, fontSize: 16 },
+  filterRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  filterLabel: { fontSize: 15, color: COLORS.textSub, fontWeight: '600' },
   table: { flex: 1, paddingHorizontal: 16 },
   tableHeader: { backgroundColor: COLORS.bgCard, borderRadius: 8 },
   row: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingVertical: 12 },
@@ -454,9 +484,9 @@ const styles = StyleSheet.create({
   actionBtn: { backgroundColor: COLORS.bgInput, borderRadius: 8, padding: 9 },
   actionBtnText: { fontSize: 14 },
   empty: { color: COLORS.textMuted, textAlign: 'center', paddingVertical: 40, fontSize: 14 },
-  overlay: { flex: 1, backgroundColor: '#00000080' },
-  overlayScroll: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  modal: { backgroundColor: COLORS.bgCard, borderRadius: 16, padding: 28, width: 460, borderWidth: 1, borderColor: COLORS.border },
+  overlay: { flex: 1, backgroundColor: '#00000080', alignItems: 'center', justifyContent: 'center' },
+  overlayScroll: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 20, width: '100%' },
+  modal: { backgroundColor: COLORS.bgCard, borderRadius: 16, padding: 28, width: 460, maxWidth: '95%' as any, alignSelf: 'center' as any, borderWidth: 1, borderColor: COLORS.border },
   modalTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, marginBottom: 16 },
   infoBox: { backgroundColor: COLORS.primary + '15', borderWidth: 1, borderColor: COLORS.primary + '30', borderRadius: 10, padding: 12, marginBottom: 14 },
   infoText: { color: COLORS.primary, fontSize: 12, lineHeight: 18 },

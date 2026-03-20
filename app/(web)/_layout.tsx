@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { label: 'Geocercas',    icon: 'location-outline',     iconActive: 'location',         route: '/(web)/geofences',   roles: ['ADMIN', 'SUPERVISOR'] },
   { label: 'Reportes',     icon: 'bar-chart-outline',    iconActive: 'bar-chart',        route: '/(web)/reports',     roles: ['ADMIN', 'SUPERVISOR'] },
   { label: 'Alertas',      icon: 'notifications-outline',iconActive: 'notifications',    route: '/(web)/alerts',      roles: ['ADMIN', 'SUPERVISOR'] },
+  { label: 'Auditoría',    icon: 'shield-outline',        iconActive: 'shield',           route: '/(web)/audit',       roles: ['ADMIN'] },
   { label: 'Mi Perfil',    icon: 'person-outline',       iconActive: 'person',           route: '/(web)/profile',     roles: ['ADMIN', 'SUPERVISOR'] },
 ];
 
