@@ -75,6 +75,7 @@ export default function UsersScreen() {
   const [newForm, setNewForm] = useState(EMPTY_NEW);
   const [editForm, setEditForm] = useState(EMPTY_EDIT);
   const [saving, setSaving] = useState(false);
+  const [showPass, setShowPass] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [toast, setToast] = useState<ToastState>({
@@ -129,6 +130,7 @@ export default function UsersScreen() {
   const openCreate = () => {
     setNewForm(EMPTY_NEW);
     setFieldErrors({});
+    setShowPass(false);
     setShowCreate(true);
   };
 
@@ -268,6 +270,12 @@ export default function UsersScreen() {
         { value: '', label: 'Todos los roles' },
         { value: 'USER', label: 'Usuario' },
       ];
+
+  const formFields = [
+    { label: 'Nombre completo *', key: 'nombre', placeholder: 'Juan Pérez' },
+    { label: 'Correo electrónico *', key: 'correo', placeholder: 'juan@ejemplo.com' },
+    { label: 'Teléfono', key: 'telefono', placeholder: '5551234567' },
+  ];
 
   return (
     <View style={styles.container}>
@@ -428,7 +436,9 @@ export default function UsersScreen() {
                     isSupervisor && u.rol !== 'USER' && { opacity: 0.5 },
                   ]}
                   onPress={() => setConfirmDelete(u.id_user)}
-                  disabled={isSupervisor && u.rol !== 'USER'}
+                  disabled={
+                    (isSupervisor && u.rol !== 'USER') || u.id_user === currentUser?.id
+                  }
                 >
                   <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
                 </TouchableOpacity>
@@ -468,12 +478,7 @@ export default function UsersScreen() {
                 </View>
               )}
 
-              {[
-                { label: 'Nombre completo *', key: 'nombre', placeholder: 'Juan Pérez' },
-                { label: 'Correo electrónico *', key: 'correo', placeholder: 'juan@ejemplo.com' },
-                { label: 'Contraseña *', key: 'password', placeholder: 'Mínimo 8 caracteres', secure: true },
-                { label: 'Teléfono', key: 'telefono', placeholder: '5551234567' },
-              ].map(({ label, key, placeholder, secure }: any) => (
+              {formFields.map(({ label, key, placeholder }: any) => (
                 <View key={key} style={styles.field}>
                   <Text style={styles.fieldLabel}>{label}</Text>
                   <TextInput
@@ -485,12 +490,33 @@ export default function UsersScreen() {
                     }}
                     placeholder={placeholder}
                     placeholderTextColor={COLORS.textMuted}
-                    secureTextEntry={secure}
-                    autoCapitalize="none"
+                    autoCapitalize={key === 'nombre' ? 'words' : 'none'}
                   />
                   {fieldErrors[key] && <Text style={styles.fieldError}>⚠️ {fieldErrors[key]}</Text>}
                 </View>
               ))}
+
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>Contraseña *</Text>
+                <View style={[styles.inputRow, fieldErrors.password && styles.inputError]}>
+                  <TextInput
+                    style={styles.inputInner}
+                    value={newForm.password}
+                    onChangeText={(v) => {
+                      setNewForm((p) => ({ ...p, password: v }));
+                      if (fieldErrors.password) setFieldErrors(p => ({...p, password: undefined}));
+                    }}
+                    placeholder='Mínimo 8 caracteres'
+                    placeholderTextColor={COLORS.textMuted}
+                    secureTextEntry={!showPass}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPass(p => !p)}>
+                    <Ionicons name={showPass ? 'eye-off-outline' : 'eye-outline'} size={20} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                </View>
+                {fieldErrors.password && <Text style={styles.fieldError}>⚠️ {fieldErrors.password}</Text>}
+              </View>
 
               {isAdmin && (
                 <View style={styles.field}>
@@ -562,7 +588,14 @@ export default function UsersScreen() {
         title="Eliminar usuario"
         message="¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer."
         confirmText="Sí, eliminar"
-        onConfirm={() => confirmDelete !== null && handleDelete(confirmDelete)}
+        onConfirm={() => {
+          if (confirmDelete === currentUser?.id) {
+            showErrorToast('No puedes eliminar tu propio usuario.');
+            setConfirmDelete(null);
+            return;
+          }
+          if (confirmDelete !== null) handleDelete(confirmDelete);
+        }}
         onCancel={() => setConfirmDelete(null)}
       />
 
@@ -796,16 +829,34 @@ export default function UsersScreen() {
       fontWeight: '500',
       },
       input: {
-      backgroundColor: COLORS.bgInput,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      color: COLORS.text,
-      fontSize: 14,
+        backgroundColor: COLORS.bgInput,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        color: COLORS.text,
+        fontSize: 14,
       },
-      roleRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+      inputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: COLORS.bgInput,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: 10,
+        paddingRight: 6,
+      },
+      inputInner: {
+        flex: 1,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        color: COLORS.text,
+        fontSize: 14,
+      },
+      eyeBtn: {
+        padding: 8,
+      },      roleRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
       roleOption: {
       paddingHorizontal: 14,
       paddingVertical: 8,
