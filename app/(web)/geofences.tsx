@@ -93,11 +93,11 @@ export default function GeofencesScreen() {
           .map(p => ({ lat: parseFloat(p.lat), lng: parseFloat(p.lng) }));
       }
 
-      const payload: any = {
+      const payload = {
         nombre: form.nombre.trim(),
         tipo: form.tipo,
         coordenadas,
-        radio: form.tipo === 'CIRCLE' ? parseFloat(form.radio) : undefined,
+        radio: form.tipo === 'CIRCLE' ? parseFloat(form.radio) : null,
       };
 
       if (editId) await geofencesService.update(editId, payload);

@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
   dashDropdownWrap: { position: 'relative' as any, zIndex: 100 },
   dashDropdownBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.bgCard, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
   dashDropdownBtnText: { flex: 1, fontSize: 13, color: COLORS.text, fontWeight: '500' },
-  dashDropdownMenu: { position: 'absolute' as any, top: 40, left: 0, right: 0, backgroundColor: COLORS.bgCard, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 8, zIndex: 200, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 8 },
+  dashDropdownMenu: { position: 'absolute' as any, top: 40, left: 0, right: 0, backgroundColor: COLORS.bgCard, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 8, zIndex: 200, boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)', elevation: 8 },
   dashDropdownItem: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   dashDropdownItemActive: { backgroundColor: COLORS.primary + '12' },
   dashDropdownItemText: { fontSize: 13, color: COLORS.textSub },

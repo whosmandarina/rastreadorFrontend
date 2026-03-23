@@ -68,7 +68,6 @@ export default function UsersScreen() {
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterRol, setFilterRol] = useState('');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -76,7 +75,7 @@ export default function UsersScreen() {
   const [newForm, setNewForm] = useState(EMPTY_NEW);
   const [editForm, setEditForm] = useState(EMPTY_EDIT);
   const [saving, setSaving] = useState(false);
-  const [createError, setCreateError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [toast, setToast] = useState<ToastState>({
     visible: false,
@@ -106,12 +105,10 @@ export default function UsersScreen() {
 
   const load = () => {
     setLoading(true);
-    // Ambos roles usan GET /api/users - el backend filtra por rol automáticamente
     usersService
       .getAll()
       .then((data) => {
         setUsers(data);
-        // Guardar supervisores para el select al crear USER como ADMIN
         if (isAdmin) setSupervisors(data.filter((u) => u.rol === 'SUPERVISOR'));
       })
       .catch(() => setUsers([]))
@@ -131,7 +128,7 @@ export default function UsersScreen() {
 
   const openCreate = () => {
     setNewForm(EMPTY_NEW);
-    setCreateError('');
+    setFieldErrors({});
     setShowCreate(true);
   };
 
@@ -144,38 +141,30 @@ export default function UsersScreen() {
       is_active: Boolean(u.is_active),
     });
     setEditing(u);
+    setFieldErrors({});
     setShowEdit(true);
   };
 
   const handleCreate = async () => {
-    setCreateError('');
+    setFieldErrors({});
+    const errs: Record<string, string> = {};
 
-    // Validaciones
     const nameError = validators.nombre(newForm.nombre);
-    if (nameError) {
-      setCreateError(nameError);
-      return;
-    }
+    if (nameError) errs.nombre = nameError;
     const correoError = validators.correo(newForm.correo);
-    if (correoError) {
-      setCreateError(correoError);
-      return;
-    }
+    if (correoError) errs.correo = correoError;
     const passError = validators.password(newForm.password);
-    if (passError) {
-      setCreateError(passError);
-      return;
-    }
+    if (passError) errs.password = passError;
     if (newForm.telefono) {
       const telError = validators.telefono(newForm.telefono);
-      if (telError) {
-        setCreateError(telError);
-        return;
-      }
+      if (telError) errs.telefono = telError;
     }
-    // ADMIN creando USER debe asignar supervisor
     if (isAdmin && newForm.rol === 'USER' && !newForm.supervisorId) {
-      setCreateError('Debes asignar un supervisor al nuevo usuario');
+      errs.supervisorId = 'Debes asignar un supervisor al nuevo usuario';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
       return;
     }
 
@@ -187,21 +176,17 @@ export default function UsersScreen() {
         password: newForm.password,
         telefono: newForm.telefono.trim() || undefined,
       };
-
-      // ADMIN envía rol y supervisorId si aplica
       if (isAdmin) {
         payload.rol = newForm.rol;
         if (newForm.rol === 'USER' && newForm.supervisorId) {
           payload.supervisorId = Number(newForm.supervisorId);
         }
       }
-      // SUPERVISOR no envía rol ni supervisorId (backend lo asigna)
-
       await authService.createUser(payload);
       setShowCreate(false);
       load();
     } catch (e: any) {
-      setCreateError(e?.response?.data?.message || 'Error al crear usuario');
+      setFieldErrors({ general: e?.response?.data?.message || 'Error al crear usuario' });
     } finally {
       setSaving(false);
     }
@@ -209,23 +194,21 @@ export default function UsersScreen() {
 
   const handleEdit = async () => {
     if (!editing) return;
+    setFieldErrors({});
+    const errs: Record<string, string> = {};
 
     const nameError = validators.nombre(editForm.nombre);
-    if (nameError) {
-      showErrorToast(nameError);
-      return;
-    }
+    if (nameError) errs.nombre = nameError;
     const correoError = validators.correo(editForm.correo);
-    if (correoError) {
-      showErrorToast(correoError);
-      return;
-    }
+    if (correoError) errs.correo = correoError;
     if (editForm.telefono) {
       const telError = validators.telefono(editForm.telefono);
-      if (telError) {
-        showErrorToast(telError);
-        return;
-      }
+      if (telError) errs.telefono = telError;
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
     }
 
     setSaving(true);
@@ -236,17 +219,15 @@ export default function UsersScreen() {
         telefono: editForm.telefono.trim() || undefined,
         is_active: Boolean(editForm.is_active),
       };
-      // Solo ADMIN puede cambiar el rol
       if (isAdmin) payload.rol = editForm.rol;
-
       await usersService.update(editing.id_user, payload);
       setShowEdit(false);
       load();
     } catch (e: any) {
       if (e?.response?.status === 403) {
-        showErrorToast('Acceso denegado: no puedes modificar este usuario');
+        setFieldErrors({ general: 'Acceso denegado: no puedes modificar este usuario' });
       } else {
-        showErrorToast(e?.response?.data?.message || 'Error al guardar');
+        setFieldErrors({ general: e?.response?.data?.message || 'Error al guardar' });
       }
     } finally {
       setSaving(false);
@@ -263,10 +244,7 @@ export default function UsersScreen() {
       if (e?.response?.status === 403) {
         showErrorToast('Acceso denegado: no puedes eliminar este usuario');
       } else {
-        showErrorToast(
-          e?.response?.data?.message ||
-            'No se pudo eliminar. Puede tener datos asociados.',
-        );
+        showErrorToast(e?.response?.data?.message || 'No se pudo eliminar. Puede tener datos asociados.');
       }
     }
   };
@@ -294,7 +272,7 @@ export default function UsersScreen() {
   return (
     <View style={styles.container}>
       {toast.visible ? (
-        <View style={styles.toastWrap} pointerEvents="none">
+        <View style={[styles.toastWrap, { pointerEvents: 'none' }]}>
           <View style={styles.toastError}>
             <Text style={styles.toastErrorText}>{toast.message}</Text>
           </View>
@@ -473,74 +451,47 @@ export default function UsersScreen() {
       {/* CREATE Modal */}
       <Modal visible={showCreate} transparent animationType="fade">
         <View style={styles.overlay}>
-          <ScrollView contentContainerStyle={styles.overlayScroll}>
-            <View style={styles.modal}>
-              <Text style={styles.modalTitle}>Crear Nuevo Usuario</Text>
-
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Crear Nuevo Usuario</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
               {isSupervisor && (
                 <View style={styles.infoBox}>
                   <Text style={styles.infoText}>
-                    ℹ️ El nuevo usuario quedará automáticamente asignado a tu
-                    equipo como Usuario.
+                    ℹ️ El nuevo usuario quedará automáticamente asignado a tu equipo como Usuario.
                   </Text>
                 </View>
               )}
 
-              {createError ? (
+              {fieldErrors.general && (
                 <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>⚠️ {createError}</Text>
+                  <Text style={styles.errorText}>⚠️ {fieldErrors.general}</Text>
                 </View>
-              ) : null}
+              )}
 
               {[
-                {
-                  label: 'Nombre completo *',
-                  key: 'nombre',
-                  placeholder: 'Juan Pérez',
-                },
-                {
-                  label: 'Correo electrónico *',
-                  key: 'correo',
-                  placeholder: 'juan@ejemplo.com',
-                },
-                {
-                  label: 'Contraseña *',
-                  key: 'password',
-                  placeholder: 'Mínimo 8 caracteres',
-                  secure: true,
-                },
-                {
-                  label: 'Teléfono',
-                  key: 'telefono',
-                  placeholder: '5551234567',
-                },
+                { label: 'Nombre completo *', key: 'nombre', placeholder: 'Juan Pérez' },
+                { label: 'Correo electrónico *', key: 'correo', placeholder: 'juan@ejemplo.com' },
+                { label: 'Contraseña *', key: 'password', placeholder: 'Mínimo 8 caracteres', secure: true },
+                { label: 'Teléfono', key: 'telefono', placeholder: '5551234567' },
               ].map(({ label, key, placeholder, secure }: any) => (
                 <View key={key} style={styles.field}>
                   <Text style={styles.fieldLabel}>{label}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, fieldErrors[key] && styles.inputError]}
                     value={(newForm as any)[key]}
-                    onChangeText={(v) =>
-                      setNewForm((p) => ({ ...p, [key]: v }))
-                    }
+                    onChangeText={(v) => {
+                      setNewForm((p) => ({ ...p, [key]: v }));
+                      if (fieldErrors[key]) setFieldErrors(p => ({...p, [key]: undefined}));
+                    }}
                     placeholder={placeholder}
                     placeholderTextColor={COLORS.textMuted}
                     secureTextEntry={secure}
                     autoCapitalize="none"
-                    maxLength={
-                      key === 'nombre'
-                        ? VALIDATION_LIMITS.nameMax
-                        : key === 'correo'
-                          ? VALIDATION_LIMITS.emailMax
-                          : key === 'password'
-                            ? VALIDATION_LIMITS.passwordMax
-                            : 20
-                    }
                   />
+                  {fieldErrors[key] && <Text style={styles.fieldError}>⚠️ {fieldErrors[key]}</Text>}
                 </View>
               ))}
 
-              {/* Selector de rol - solo ADMIN */}
               {isAdmin && (
                 <View style={styles.field}>
                   <Text style={styles.fieldLabel}>Rol *</Text>
@@ -548,26 +499,10 @@ export default function UsersScreen() {
                     {ROLES.map(({ value: r, label: rLabel }) => (
                       <TouchableOpacity
                         key={r}
-                        style={[
-                          styles.roleOption,
-                          newForm.rol === r && styles.roleOptionActive,
-                        ]}
-                        onPress={() =>
-                          setNewForm((p) => ({
-                            ...p,
-                            rol: r,
-                            supervisorId: '',
-                          }))
-                        }
+                        style={[ styles.roleOption, newForm.rol === r && styles.roleOptionActive ]}
+                        onPress={() => setNewForm((p) => ({ ...p, rol: r, supervisorId: '' }))}
                       >
-                        <Text
-                          style={[
-                            styles.roleOptionText,
-                            newForm.rol === r && {
-                              color: ROLE_COLORS[r] ?? COLORS.primary,
-                            },
-                          ]}
-                        >
+                        <Text style={[ styles.roleOptionText, newForm.rol === r && { color: ROLE_COLORS[r] ?? COLORS.primary } ]}>
                           {rLabel}
                         </Text>
                       </TouchableOpacity>
@@ -576,90 +511,49 @@ export default function UsersScreen() {
                 </View>
               )}
 
-              {/* Selector de supervisor - ADMIN creando USER */}
               {isAdmin && newForm.rol === 'USER' && (
                 <View style={styles.field}>
                   <Text style={styles.fieldLabel}>Asignar a Supervisor *</Text>
                   {supervisors.length === 0 ? (
                     <View style={styles.warnBox}>
                       <Text style={styles.warnText}>
-                        ⚠️ No hay supervisores disponibles. Crea un supervisor
-                        primero.
+                        ⚠️ No hay supervisores disponibles. Crea un supervisor primero.
                       </Text>
                     </View>
                   ) : (
-                    <ScrollView
-                      style={styles.supervisorList}
-                      showsVerticalScrollIndicator={false}
-                    >
+                    <ScrollView style={styles.supervisorList} showsVerticalScrollIndicator={false}>
                       {supervisors.map((s) => (
                         <TouchableOpacity
                           key={s.id_user}
-                          style={[
-                            styles.supervisorOption,
-                            newForm.supervisorId === String(s.id_user) &&
-                              styles.supervisorOptionActive,
-                          ]}
-                          onPress={() =>
-                            setNewForm((p) => ({
-                              ...p,
-                              supervisorId: String(s.id_user),
-                            }))
-                          }
+                          style={[ styles.supervisorOption, newForm.supervisorId === String(s.id_user) && styles.supervisorOptionActive ]}
+                          onPress={() => setNewForm((p) => ({ ...p, supervisorId: String(s.id_user) }))}
                         >
                           <View style={styles.supAvatar}>
-                            <Text style={styles.supAvatarText}>
-                              {s.nombre.charAt(0)}
-                            </Text>
+                            <Text style={styles.supAvatarText}>{s.nombre.charAt(0)}</Text>
                           </View>
-                          <Text
-                            style={[
-                              styles.supervisorOptionText,
-                              newForm.supervisorId === String(s.id_user) && {
-                                color: COLORS.primary,
-                              },
-                            ]}
-                          >
+                          <Text style={[ styles.supervisorOptionText, newForm.supervisorId === String(s.id_user) && { color: COLORS.primary } ]}>
                             {s.nombre}
                           </Text>
                           {newForm.supervisorId === String(s.id_user) && (
-                            <Text
-                              style={{
-                                color: COLORS.primary,
-                                fontWeight: '800',
-                              }}
-                            >
-                              ✓
-                            </Text>
+                            <Text style={{ color: COLORS.primary, fontWeight: '800' }}>✓</Text>
                           )}
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
                   )}
+                  {fieldErrors.supervisorId && <Text style={styles.fieldError}>⚠️ {fieldErrors.supervisorId}</Text>}
                 </View>
               )}
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={() => setShowCreate(false)}
-                >
-                  <Text style={styles.cancelText}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.saveBtn}
-                  onPress={handleCreate}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.saveText}>Crear usuario</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
+            </ScrollView>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowCreate(false)}>
+                <Text style={styles.cancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveBtn} onPress={handleCreate} disabled={saving}>
+                {saving ? ( <ActivityIndicator color="#fff" /> ) : ( <Text style={styles.saveText}>Crear usuario</Text> )}
+              </TouchableOpacity>
             </View>
-          </ScrollView>
+          </View>
         </View>
       </Modal>
 
@@ -675,12 +569,14 @@ export default function UsersScreen() {
       {/* EDIT Modal */}
       <Modal visible={showEdit} transparent animationType="fade">
         <View style={styles.overlay}>
-          <ScrollView
-            contentContainerStyle={styles.overlayScroll}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.modal}>
-              <Text style={styles.modalTitle}>Editar Usuario</Text>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Editar Usuario</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {fieldErrors.general && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>⚠️ {fieldErrors.general}</Text>
+                </View>
+              )}
 
               {[
                 { label: 'Nombre', key: 'nombre' },
@@ -690,25 +586,19 @@ export default function UsersScreen() {
                 <View key={key} style={styles.field}>
                   <Text style={styles.fieldLabel}>{label}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, fieldErrors[key] && styles.inputError]}
                     value={(editForm as any)[key]}
-                    onChangeText={(v) =>
-                      setEditForm((p) => ({ ...p, [key]: v }))
-                    }
+                    onChangeText={(v) => {
+                      setEditForm((p) => ({ ...p, [key]: v }));
+                      if (fieldErrors[key]) setFieldErrors(p => ({...p, [key]: undefined}));
+                    }}
                     placeholderTextColor={COLORS.textMuted}
                     autoCapitalize="none"
-                    maxLength={
-                      key === 'nombre'
-                        ? VALIDATION_LIMITS.nameMax
-                        : key === 'correo'
-                          ? VALIDATION_LIMITS.emailMax
-                          : 20
-                    }
                   />
+                  {fieldErrors[key] && <Text style={styles.fieldError}>⚠️ {fieldErrors[key]}</Text>}
                 </View>
               ))}
 
-              {/* Solo ADMIN puede cambiar rol */}
               {isAdmin && (
                 <View style={styles.field}>
                   <Text style={styles.fieldLabel}>Rol</Text>
@@ -716,20 +606,10 @@ export default function UsersScreen() {
                     {ROLES.map(({ value: r, label: rLabel }) => (
                       <TouchableOpacity
                         key={r}
-                        style={[
-                          styles.roleOption,
-                          editForm.rol === r && styles.roleOptionActive,
-                        ]}
+                        style={[ styles.roleOption, editForm.rol === r && styles.roleOptionActive ]}
                         onPress={() => setEditForm((p) => ({ ...p, rol: r }))}
                       >
-                        <Text
-                          style={[
-                            styles.roleOptionText,
-                            editForm.rol === r && {
-                              color: ROLE_COLORS[r] ?? COLORS.primary,
-                            },
-                          ]}
-                        >
+                        <Text style={[ styles.roleOptionText, editForm.rol === r && { color: ROLE_COLORS[r] ?? COLORS.primary } ]}>
                           {rLabel}
                         </Text>
                       </TouchableOpacity>
@@ -742,266 +622,257 @@ export default function UsersScreen() {
                 <Text style={styles.fieldLabel}>Usuario activo</Text>
                 <Switch
                   value={editForm.is_active}
-                  onValueChange={(v) =>
-                    setEditForm((p) => ({ ...p, is_active: v }))
-                  }
+                  onValueChange={(v) => setEditForm((p) => ({ ...p, is_active: v }))}
                   trackColor={{ false: COLORS.border, true: COLORS.primary }}
                 />
               </View>
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={() => setShowEdit(false)}
-                >
-                  <Text style={styles.cancelText}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.saveBtn}
-                  onPress={handleEdit}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.saveText}>Guardar</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
+            </ScrollView>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowEdit(false)}>
+                <Text style={styles.cancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveBtn} onPress={handleEdit} disabled={saving}>
+                {saving ? ( <ActivityIndicator color="#fff" /> ) : ( <Text style={styles.saveText}>Guardar</Text> )}
+              </TouchableOpacity>
             </View>
-          </ScrollView>
+          </View>
         </View>
       </Modal>
-    </View>
-  );
-}
+      </View>
+      );
+      }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  toastWrap: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    zIndex: 999,
-  },
-  toastError: {
-    maxWidth: 420,
-    backgroundColor: COLORS.danger + '20',
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  toastErrorText: {
-    color: COLORS.danger,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  title: { fontSize: 20, fontWeight: '800', color: COLORS.text },
-  sub: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
-  addBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  addBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  toolbar: { padding: 16, gap: 12 },
-  search: {
-    backgroundColor: COLORS.bgInput,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: COLORS.text,
-    fontSize: 16,
-  },
-  filterRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  filterLabel: { fontSize: 15, color: COLORS.textSub, fontWeight: '600' },
-  table: { flex: 1, paddingHorizontal: 16 },
-  tableHeader: { backgroundColor: COLORS.bgCard, borderRadius: 8 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingVertical: 12,
-  },
-  cell: { flex: 1, paddingHorizontal: 8 },
-  cellHeader: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    paddingVertical: 10,
-  },
-  roleBadge: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    alignSelf: 'flex-start',
-  },
-  roleText: { fontSize: 11, fontWeight: '700' },
-  statusBadge: {
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    alignSelf: 'flex-start',
-  },
-  statusText: { fontSize: 11, fontWeight: '600' },
-  actionBtn: { backgroundColor: COLORS.bgInput, borderRadius: 8, padding: 9 },
-  actionBtnText: { fontSize: 14 },
-  empty: {
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    paddingVertical: 40,
-    fontSize: 14,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: '#00000080',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  overlayScroll: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    width: '100%',
-  },
-  modal: {
-    backgroundColor: COLORS.bgCard,
-    borderRadius: 16,
-    padding: 28,
-    width: 460,
-    maxWidth: '95%' as any,
-    alignSelf: 'center' as any,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: COLORS.text,
-    marginBottom: 16,
-  },
-  infoBox: {
-    backgroundColor: COLORS.primary + '15',
-    borderWidth: 1,
-    borderColor: COLORS.primary + '30',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 14,
-  },
-  infoText: { color: COLORS.primary, fontSize: 12, lineHeight: 18 },
-  errorBox: {
-    backgroundColor: '#7f1d1d33',
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 14,
-  },
-  errorText: { color: COLORS.danger, fontSize: 13 },
-  warnBox: {
-    backgroundColor: COLORS.warning + '15',
-    borderWidth: 1,
-    borderColor: COLORS.warning + '40',
-    borderRadius: 10,
-    padding: 12,
-  },
-  warnText: { color: COLORS.warning, fontSize: 12 },
-  field: { marginBottom: 14 },
-  fieldLabel: {
-    fontSize: 13,
-    color: COLORS.textSub,
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-  input: {
-    backgroundColor: COLORS.bgInput,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    color: COLORS.text,
-    fontSize: 14,
-  },
-  roleRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  roleOption: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.bgInput,
-  },
-  roleOptionActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '15',
-  },
-  roleOptionText: { fontSize: 13, color: COLORS.textMuted, fontWeight: '600' },
-  supervisorList: {
-    maxHeight: 180,
-    backgroundColor: COLORS.bgInput,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  supervisorOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  supervisorOptionActive: { backgroundColor: COLORS.primary + '15' },
-  supervisorOptionText: { flex: 1, fontSize: 13, color: COLORS.textSub },
-  supAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: COLORS.primary + '30',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  supAvatarText: { color: COLORS.primary, fontWeight: '700', fontSize: 13 },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalActions: { flexDirection: 'row', gap: 10 },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-  },
-  cancelText: { color: COLORS.textMuted, fontWeight: '600' },
-  saveBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-  },
-  saveText: { color: '#fff', fontWeight: '700' },
-});
+      const styles = StyleSheet.create({
+      container: { flex: 1, backgroundColor: COLORS.bg },
+      toastWrap: {
+      position: 'absolute',
+      top: 16,
+      right: 16,
+      zIndex: 999,
+      },
+      toastError: {
+      maxWidth: 420,
+      backgroundColor: COLORS.danger + '20',
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+      borderRadius: 10,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      },
+      toastErrorText: {
+      color: COLORS.danger,
+      fontSize: 13,
+      fontWeight: '600',
+      },
+      header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: COLORS.border,
+      },
+      title: { fontSize: 20, fontWeight: '800', color: COLORS.text },
+      sub: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
+      addBtn: {
+      backgroundColor: COLORS.primary,
+      borderRadius: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      },
+      addBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+      toolbar: { padding: 16, gap: 12 },
+      search: {
+      backgroundColor: COLORS.bgInput,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      color: COLORS.text,
+      fontSize: 16,
+      },
+      filterRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+      filterLabel: { fontSize: 15, color: COLORS.textSub, fontWeight: '600' },
+      table: { flex: 1, paddingHorizontal: 16 },
+      tableHeader: { backgroundColor: COLORS.bgCard, borderRadius: 8 },
+      row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderBottomWidth: 1,
+      borderBottomColor: COLORS.border,
+      paddingVertical: 12,
+      },
+      cell: { flex: 1, paddingHorizontal: 8 },
+      cellHeader: {
+      fontSize: 12,
+      color: COLORS.textMuted,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      paddingVertical: 10,
+      },
+      roleBadge: {
+      borderWidth: 1,
+      borderRadius: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      alignSelf: 'flex-start',
+      },
+      roleText: { fontSize: 11, fontWeight: '700' },
+      statusBadge: {
+      borderRadius: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      alignSelf: 'flex-start',
+      },
+      statusText: { fontSize: 11, fontWeight: '600' },
+      actionBtn: { backgroundColor: COLORS.bgInput, borderRadius: 8, padding: 9 },
+      actionBtnText: { fontSize: 14 },
+      empty: {
+      color: COLORS.textMuted,
+      textAlign: 'center',
+      paddingVertical: 40,
+      fontSize: 14,
+      },
+      overlay: {
+      flex: 1,
+      backgroundColor: '#00000080',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 20,
+      },
+      modal: {
+      backgroundColor: COLORS.bgCard,
+      borderRadius: 16,
+      padding: 28,
+      width: 460,
+      maxWidth: '95%',
+      maxHeight: '90%',
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      display: 'flex',
+      flexDirection: 'column',
+      },
+      modalTitle: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: COLORS.text,
+      marginBottom: 16,
+      flexShrink: 0,
+      },
+      infoBox: {
+      backgroundColor: COLORS.primary + '15',
+      borderWidth: 1,
+      borderColor: COLORS.primary + '30',
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 14,
+      },
+      infoText: { color: COLORS.primary, fontSize: 12, lineHeight: 18 },
+      errorBox: {
+      backgroundColor: '#7f1d1d33',
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 14,
+      },
+      errorText: { color: COLORS.danger, fontSize: 13 },
+      fieldError: { color: COLORS.danger, fontSize: 12, marginTop: 4, marginBottom: 2 },
+      inputError: { borderColor: COLORS.danger },
+      warnBox: {
+      backgroundColor: COLORS.warning + '15',
+      borderWidth: 1,
+      borderColor: COLORS.warning + '40',
+      borderRadius: 10,
+      padding: 12,
+      },
+      warnText: { color: COLORS.warning, fontSize: 12 },
+      field: { marginBottom: 14 },
+      fieldLabel: {
+      fontSize: 13,
+      color: COLORS.textSub,
+      marginBottom: 6,
+      fontWeight: '500',
+      },
+      input: {
+      backgroundColor: COLORS.bgInput,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      color: COLORS.text,
+      fontSize: 14,
+      },
+      roleRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+      roleOption: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.bgInput,
+      },
+      roleOptionActive: {
+      borderColor: COLORS.primary,
+      backgroundColor: COLORS.primary + '15',
+      },
+      roleOptionText: { fontSize: 13, color: COLORS.textMuted, fontWeight: '600' },
+      supervisorList: {
+      maxHeight: 180,
+      backgroundColor: COLORS.bgInput,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      },
+      supervisorOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      padding: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: COLORS.border,
+      },
+      supervisorOptionActive: { backgroundColor: COLORS.primary + '15' },
+      supervisorOptionText: { flex: 1, fontSize: 13, color: COLORS.textSub },
+      supAvatar: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: COLORS.primary + '30',
+      alignItems: 'center',
+      justifyContent: 'center',
+      },
+      supAvatarText: { color: COLORS.primary, fontWeight: '700', fontSize: 13 },
+      switchRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginVertical: 10,
+      flexShrink: 0,
+      },
+      modalActions: { 
+      flexDirection: 'row', 
+      gap: 10,
+      marginTop: 20,
+      flexShrink: 0,
+      },
+      cancelBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      alignItems: 'center',
+      },
+      cancelText: { color: COLORS.textMuted, fontWeight: '600' },
+      saveBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 10,
+      backgroundColor: COLORS.primary,
+      alignItems: 'center',
+      },
+      saveText: { color: '#fff', fontWeight: '700' },
+      });

@@ -17,34 +17,34 @@ export const VALIDATION_LIMITS = {
 const nombreSchema = z
   .string()
   .trim()
-  .min(1, { message: 'name is required' })
+  .min(1, { message: 'El nombre es obligatorio' })
   .min(VALIDATION_LIMITS.nameMin, {
-    message: `name must have at least ${VALIDATION_LIMITS.nameMin} characters`,
+    message: `El nombre debe tener al menos ${VALIDATION_LIMITS.nameMin} caracteres`,
   })
   .max(VALIDATION_LIMITS.nameMax, {
-    message: `name must have at most ${VALIDATION_LIMITS.nameMax} characters`,
+    message: `El nombre no puede exceder los ${VALIDATION_LIMITS.nameMax} caracteres`,
   })
   .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/, {
-    message: 'name must contain letters and spaces only',
+    message: 'El nombre solo debe contener letras y espacios',
   });
 
 const correoSchema = z
   .string()
   .trim()
-  .min(1, { message: 'email is required' })
+  .min(1, { message: 'El correo es obligatorio' })
   .max(VALIDATION_LIMITS.emailMax, {
-    message: `email must have at most ${VALIDATION_LIMITS.emailMax} characters`,
+    message: `El correo no puede exceder los ${VALIDATION_LIMITS.emailMax} caracteres`,
   })
-  .email({ message: 'email must be valid' });
+  .email({ message: 'El correo debe ser válido' });
 
 const passwordSchema = z
   .string()
-  .min(1, { message: 'password is required' })
+  .min(1, { message: 'La contraseña es obligatoria' })
   .min(VALIDATION_LIMITS.passwordMin, {
-    message: `password must have at least ${VALIDATION_LIMITS.passwordMin} characters`,
+    message: `La contraseña debe tener al menos ${VALIDATION_LIMITS.passwordMin} caracteres`,
   })
   .max(VALIDATION_LIMITS.passwordMax, {
-    message: `password must have at most ${VALIDATION_LIMITS.passwordMax} characters`,
+    message: `La contraseña no puede exceder los ${VALIDATION_LIMITS.passwordMax} caracteres`,
   });
 
 const telefonoSchema = z
@@ -54,7 +54,7 @@ const telefonoSchema = z
       if (!value) return true;
       return /^[0-9+\s\-()]+$/.test(value);
     },
-    { message: 'phone must contain valid characters only' },
+    { message: 'El teléfono solo debe contener caracteres válidos' },
   )
   .refine(
     (value) => {
@@ -66,25 +66,25 @@ const telefonoSchema = z
       );
     },
     {
-      message: `phone must have between ${VALIDATION_LIMITS.phoneMinDigits} and ${VALIDATION_LIMITS.phoneMaxDigits} digits`,
+      message: `El teléfono debe tener entre ${VALIDATION_LIMITS.phoneMinDigits} y ${VALIDATION_LIMITS.phoneMaxDigits} dígitos`,
     },
   );
 
 const codigoSupervisorSchema = z
   .string()
   .trim()
-  .min(1, { message: 'supervisor code is required' })
+  .min(1, { message: 'El código de supervisor es obligatorio' })
   .max(VALIDATION_LIMITS.supervisorCodeMax, {
-    message: `supervisor code must have at most ${VALIDATION_LIMITS.supervisorCodeMax} digits`,
+    message: `El código no puede exceder los ${VALIDATION_LIMITS.supervisorCodeMax} dígitos`,
   })
-  .regex(/^\d+$/, { message: 'supervisor code must be numeric' })
+  .regex(/^\d+$/, { message: 'El código de supervisor debe ser numérico' })
   .refine((value) => Number(value) > 0, {
-    message: 'supervisor code must be greater than 0',
+    message: 'El código de supervisor debe ser mayor a 0',
   });
 
 const getFirstError = (result: z.SafeParseReturnType<string, string>) => {
   if (result.success) return null;
-  return result.error.issues[0]?.message || 'invalid value';
+  return result.error.issues[0]?.message || 'valor inválido';
 };
 
 export const validators = {
