@@ -5,17 +5,19 @@ El sistema "Rastreador" expone dos vías principales de interacción: la API RES
 ## 1. Puntos de entrada
 
 ### API REST (HTTP)
+
 El backend escucha peticiones HTTP en el puerto definido (por defecto **3000**). Todos los endpoints están prefijados con `/api`.
 
-| Prefijo | Responsabilidad |
-| :--- | :--- |
-| **`/api/auth`** | Gestión de sesiones y seguridad. |
+| Prefijo              | Responsabilidad                                 |
+| :------------------- | :---------------------------------------------- |
+| **`/api/auth`**      | Gestión de sesiones y seguridad.                |
 | **`/api/locations`** | Recepción de ubicaciones (Real-time y Offline). |
-| **`/api/geofences`** | Administración de zonas virtuales. |
-| **`/api/alerts`** | Historial de eventos críticos. |
-| **`/api/reports`** | Exportación de datos. |
+| **`/api/geofences`** | Administración de zonas virtuales.              |
+| **`/api/alerts`**    | Historial de eventos críticos.                  |
+| **`/api/reports`**   | Exportación de datos.                           |
 
 ### Tiempo Real (Socket.io)
+
 - **`updateLocation`**: Emite posiciones de usuarios al Dashboard.
 - **`newAlert`**: Notifica alertas críticas instantáneamente.
 

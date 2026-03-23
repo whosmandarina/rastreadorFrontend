@@ -1,12 +1,19 @@
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { useState } from 'react';
 import { Link, useRouter } from 'expo-router';
 import { authService } from '../../src/services/auth.service';
 import { Ionicons } from '@expo/vector-icons';
-import { validators } from '../../src/utils/validators';
+import { VALIDATION_LIMITS, validators } from '../../src/utils/validators';
 import { COLORS } from '../../src/constants';
 
 interface FieldErrors {
@@ -74,9 +81,15 @@ export default function RegisterScreen() {
         codigo_supervisor: Number(form.codigo_supervisor),
       });
       // Redirigir al login con mensaje de éxito
-      router.replace({ pathname: '/(auth)/login', params: { registered: '1' } });
+      router.replace({
+        pathname: '/(auth)/login',
+        params: { registered: '1' },
+      });
     } catch (e: any) {
-      setGlobalError(e?.response?.data?.message || 'Error al registrarse. Verifica tus datos.');
+      setGlobalError(
+        e?.response?.data?.message ||
+          'Error al registrarse. Verifica tus datos.',
+      );
     } finally {
       setLoading(false);
     }
@@ -87,11 +100,18 @@ export default function RegisterScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity style={styles.backBtn}>
-              <Ionicons name="arrow-back-outline" size={18} color={COLORS.primary} />
+              <Ionicons
+                name="arrow-back-outline"
+                size={18}
+                color={COLORS.primary}
+              />
               <Text style={styles.backText}>Volver al login</Text>
             </TouchableOpacity>
           </Link>
@@ -112,17 +132,29 @@ export default function RegisterScreen() {
           <View style={styles.field}>
             <Text style={styles.supervisorLabel}>🔑 Código de Supervisor</Text>
             <TextInput
-              style={[styles.supervisorInput, errors.codigo_supervisor && styles.inputError]}
+              style={[
+                styles.supervisorInput,
+                errors.codigo_supervisor && styles.inputError,
+              ]}
               value={form.codigo_supervisor}
-              onChangeText={(v) => update('codigo_supervisor', v.replace(/[^0-9]/g, ''))}
+              onChangeText={(v) =>
+                update('codigo_supervisor', v.replace(/[^0-9]/g, ''))
+              }
               placeholder="Ej: 102"
               placeholderTextColor={COLORS.textMuted}
               keyboardType="numeric"
+              maxLength={VALIDATION_LIMITS.supervisorCodeMax}
             />
-            {errors.codigo_supervisor
-              ? <Text style={styles.fieldError}>⚠️ {errors.codigo_supervisor}</Text>
-              : <Text style={styles.fieldHint}>Solicita este número a tu supervisor. Es obligatorio para crear tu cuenta.</Text>
-            }
+            {errors.codigo_supervisor ? (
+              <Text style={styles.fieldError}>
+                ⚠️ {errors.codigo_supervisor}
+              </Text>
+            ) : (
+              <Text style={styles.fieldHint}>
+                Solicita este número a tu supervisor. Es obligatorio para crear
+                tu cuenta.
+              </Text>
+            )}
           </View>
 
           <View style={styles.divider} />
@@ -137,11 +169,15 @@ export default function RegisterScreen() {
               placeholder="Ej: Juan Pérez García"
               placeholderTextColor={COLORS.textMuted}
               autoCapitalize="words"
+              maxLength={VALIDATION_LIMITS.nameMax}
             />
-            {errors.nombre
-              ? <Text style={styles.fieldError}>⚠️ {errors.nombre}</Text>
-              : <Text style={styles.fieldHint}>Solo letras y espacios, sin caracteres especiales.</Text>
-            }
+            {errors.nombre ? (
+              <Text style={styles.fieldError}>⚠️ {errors.nombre}</Text>
+            ) : (
+              <Text style={styles.fieldHint}>
+                Solo letras y espacios, sin caracteres especiales.
+              </Text>
+            )}
           </View>
 
           {/* Correo */}
@@ -155,8 +191,11 @@ export default function RegisterScreen() {
               placeholderTextColor={COLORS.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
+              maxLength={VALIDATION_LIMITS.emailMax}
             />
-            {errors.correo && <Text style={styles.fieldError}>⚠️ {errors.correo}</Text>}
+            {errors.correo && (
+              <Text style={styles.fieldError}>⚠️ {errors.correo}</Text>
+            )}
           </View>
 
           {/* Contraseña */}
@@ -169,11 +208,13 @@ export default function RegisterScreen() {
               placeholder="Ej: MiClave2024"
               placeholderTextColor={COLORS.textMuted}
               secureTextEntry
+              maxLength={VALIDATION_LIMITS.passwordMax}
             />
-            {errors.password
-              ? <Text style={styles.fieldError}>⚠️ {errors.password}</Text>
-              : <Text style={styles.fieldHint}>Mínimo 8 caracteres.</Text>
-            }
+            {errors.password ? (
+              <Text style={styles.fieldError}>⚠️ {errors.password}</Text>
+            ) : (
+              <Text style={styles.fieldHint}>Mínimo 8 caracteres.</Text>
+            )}
           </View>
 
           {/* Teléfono */}
@@ -186,11 +227,15 @@ export default function RegisterScreen() {
               placeholder="Ej: 3121234567"
               placeholderTextColor={COLORS.textMuted}
               keyboardType="phone-pad"
+              maxLength={20}
             />
-            {errors.telefono
-              ? <Text style={styles.fieldError}>⚠️ {errors.telefono}</Text>
-              : <Text style={styles.fieldHint}>Solo números, entre 7 y 15 dígitos.</Text>
-            }
+            {errors.telefono ? (
+              <Text style={styles.fieldError}>⚠️ {errors.telefono}</Text>
+            ) : (
+              <Text style={styles.fieldHint}>
+                Solo números, entre 7 y 15 dígitos.
+              </Text>
+            )}
           </View>
 
           <TouchableOpacity
@@ -198,10 +243,11 @@ export default function RegisterScreen() {
             onPress={handleRegister}
             disabled={loading}
           >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.btnText}>Crear cuenta</Text>
-            }
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.btnText}>Crear cuenta</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -213,32 +259,90 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   scroll: { flexGrow: 1, padding: 24, paddingTop: 60 },
   header: { marginBottom: 24 },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: COLORS.primary + '15', borderWidth: 1, borderColor: COLORS.primary + '40', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, marginBottom: 16 },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.primary + '15',
+    borderWidth: 1,
+    borderColor: COLORS.primary + '40',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
   backText: { color: COLORS.primary, fontSize: 14, fontWeight: '600' },
-  cardTitle: { fontSize: 22, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
+  cardTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
   cardSub: { fontSize: 13, color: COLORS.textMuted, lineHeight: 20 },
-  card: { backgroundColor: COLORS.bgCard, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: COLORS.border },
-  globalErrorBox: { backgroundColor: '#7f1d1d33', borderWidth: 1, borderColor: COLORS.danger, borderRadius: 10, padding: 12, marginBottom: 16 },
+  card: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  globalErrorBox: {
+    backgroundColor: '#7f1d1d33',
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+  },
   globalErrorText: { color: COLORS.danger, fontSize: 13 },
   field: { marginBottom: 18 },
-  label: { fontSize: 13, color: COLORS.textSub, marginBottom: 6, fontWeight: '500' },
-  supervisorLabel: { fontSize: 14, fontWeight: '800', color: COLORS.primary, marginBottom: 8 },
+  label: {
+    fontSize: 13,
+    color: COLORS.textSub,
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  supervisorLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.primary,
+    marginBottom: 8,
+  },
   input: {
-    backgroundColor: COLORS.bgInput, borderWidth: 1, borderColor: COLORS.border,
-    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12,
-    color: COLORS.text, fontSize: 15,
+    backgroundColor: COLORS.bgInput,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: COLORS.text,
+    fontSize: 15,
   },
   supervisorInput: {
-    backgroundColor: COLORS.bgInput, borderWidth: 1.5, borderColor: COLORS.primary + '60',
-    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-    color: COLORS.text, fontSize: 20, fontWeight: '700',
-    textAlign: 'center', letterSpacing: 6,
+    backgroundColor: COLORS.bgInput,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary + '60',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: COLORS.text,
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 6,
   },
   inputError: { borderColor: COLORS.danger },
   fieldError: { color: COLORS.danger, fontSize: 12, marginTop: 5 },
   fieldHint: { color: COLORS.textMuted, fontSize: 11, marginTop: 5 },
   divider: { height: 1, backgroundColor: COLORS.border, marginBottom: 18 },
-  btn: { backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 15, alignItems: 'center', marginTop: 4 },
+  btn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: 4,
+  },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

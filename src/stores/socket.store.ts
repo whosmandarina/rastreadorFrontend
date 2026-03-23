@@ -69,18 +69,25 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       }));
     });
 
-    socket.on('user_status_changed', (data: { id_user: number; status: 'ONLINE' | 'OFFLINE'; timestamp: string }) => {
-      set((state) => ({
-        liveUsers: {
-          ...state.liveUsers,
-          [data.id_user]: {
-            ...(state.liveUsers[data.id_user] || {}),
-            id_user: data.id_user,
-            status: data.status,
-          } as LiveUser,
-        },
-      }));
-    });
+    socket.on(
+      'user_status_changed',
+      (data: {
+        id_user: number;
+        status: 'ONLINE' | 'OFFLINE';
+        timestamp: string;
+      }) => {
+        set((state) => ({
+          liveUsers: {
+            ...state.liveUsers,
+            [data.id_user]: {
+              ...(state.liveUsers[data.id_user] || {}),
+              id_user: data.id_user,
+              status: data.status,
+            } as LiveUser,
+          },
+        }));
+      },
+    );
 
     socket.on('new_alert', (alert: LiveAlert) => {
       set((state) => ({

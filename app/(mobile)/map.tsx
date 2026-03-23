@@ -57,7 +57,9 @@ export default function MapScreen() {
 
   const { latitud, longitud } = currentLocation;
   const html = buildMapHTML(latitud, longitud);
-  const updateStr = lastUpdate ? new Date(lastUpdate).toLocaleTimeString('es-MX') : '—';
+  const updateStr = lastUpdate
+    ? new Date(lastUpdate).toLocaleTimeString('es-MX')
+    : '—';
 
   return (
     <View style={styles.container}>
@@ -106,15 +108,31 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   infoBar: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 10,
-    backgroundColor: COLORS.bgCard, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: COLORS.bgCard,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
     paddingTop: 52,
   },
   coordText: { fontSize: 12, color: COLORS.textSub, fontWeight: '600' },
   timeText: { fontSize: 12, color: COLORS.textMuted },
-  empty: { flex: 1, backgroundColor: COLORS.bg, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
+  empty: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    gap: 12,
+  },
   emptyIcon: { fontSize: 52 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
-  emptySub: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', lineHeight: 22 },
+  emptySub: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
 });

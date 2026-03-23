@@ -12,7 +12,11 @@ export interface Alert {
 }
 
 export const alertsService = {
-  getAll: async (params?: { limit?: number; offset?: number; unreadOnly?: boolean }) => {
+  getAll: async (params?: {
+    limit?: number;
+    offset?: number;
+    unreadOnly?: boolean;
+  }) => {
     const { data } = await api.get('/alerts', { params });
     return data as Alert[];
   },

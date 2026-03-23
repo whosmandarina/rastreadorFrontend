@@ -2,11 +2,20 @@ import { create } from 'zustand';
 import { Platform } from 'react-native';
 import { locationService } from '../services/location.service';
 import { offlineDB } from '../services/offline.service';
-import { BATTERY_LOW_THRESHOLD, LOCATION_INTERVAL_NORMAL, LOCATION_INTERVAL_LOW_BATTERY } from '../constants';
+import {
+  BATTERY_LOW_THRESHOLD,
+  LOCATION_INTERVAL_NORMAL,
+  LOCATION_INTERVAL_LOW_BATTERY,
+} from '../constants';
 
 export type TrackingStatus =
-  | 'IDLE' | 'ACTIVE' | 'PAUSED' | 'NO_GPS'
-  | 'NO_INTERNET' | 'LOW_BATTERY' | 'OFFLINE_SAVING';
+  | 'IDLE'
+  | 'ACTIVE'
+  | 'PAUSED'
+  | 'NO_GPS'
+  | 'NO_INTERNET'
+  | 'LOW_BATTERY'
+  | 'OFFLINE_SAVING';
 
 interface TrackingState {
   status: TrackingStatus;
@@ -162,7 +171,11 @@ async function startWebTracking(set: any, get: any) {
   navigator.geolocation.getCurrentPosition(sendPosition, handleError, options);
 
   // Luego watch continuo
-  webWatchId = navigator.geolocation.watchPosition(sendPosition, handleError, options);
+  webWatchId = navigator.geolocation.watchPosition(
+    sendPosition,
+    handleError,
+    options,
+  );
 
   // Guardar cleanup de network listeners
   netInfoUnsubscribe = () => {
@@ -179,7 +192,10 @@ async function startNativeTracking(set: any, get: any) {
     const NetInfo = (await import('@react-native-community/netinfo')).default;
 
     const { status: fg } = await Location.requestForegroundPermissionsAsync();
-    if (fg !== 'granted') { set({ status: 'NO_GPS' }); return; }
+    if (fg !== 'granted') {
+      set({ status: 'NO_GPS' });
+      return;
+    }
     await Location.requestBackgroundPermissionsAsync();
 
     await offlineDB.init();
@@ -188,10 +204,13 @@ async function startNativeTracking(set: any, get: any) {
     set({ isTracking: true, status: 'ACTIVE' });
 
     netInfoUnsubscribe = NetInfo.addEventListener((state) => {
-      const online = state.isConnected === true && state.isInternetReachable === true;
+      const online =
+        state.isConnected === true && state.isInternetReachable === true;
       set({ isOnline: online });
-      if (online) { get().syncPending(); set({ status: 'ACTIVE' }); }
-      else set({ status: 'NO_INTERNET' });
+      if (online) {
+        get().syncPending();
+        set({ status: 'ACTIVE' });
+      } else set({ status: 'NO_INTERNET' });
     });
 
     const sendLocation = async (loc: any) => {
@@ -208,17 +227,26 @@ async function startNativeTracking(set: any, get: any) {
         latitud: loc.coords.latitude,
         longitud: loc.coords.longitude,
         precision_gps: loc.coords.accuracy ?? undefined,
-        velocidad: loc.coords.speed ? Math.round(loc.coords.speed * 3.6) : undefined,
+        velocidad: loc.coords.speed
+          ? Math.round(loc.coords.speed * 3.6)
+          : undefined,
         bateria,
         timestamp_captura: new Date(loc.timestamp).toISOString(),
       };
 
       set({
-        currentLocation: { latitud: payload.latitud, longitud: payload.longitud },
+        currentLocation: {
+          latitud: payload.latitud,
+          longitud: payload.longitud,
+        },
         lastUpdate: payload.timestamp_captura,
         speed: payload.velocidad ?? null,
         accuracy: payload.precision_gps ?? null,
-        status: isOnline ? (bateria && bateria <= BATTERY_LOW_THRESHOLD ? 'LOW_BATTERY' : 'ACTIVE') : 'OFFLINE_SAVING',
+        status: isOnline
+          ? bateria && bateria <= BATTERY_LOW_THRESHOLD
+            ? 'LOW_BATTERY'
+            : 'ACTIVE'
+          : 'OFFLINE_SAVING',
       });
 
       await locationService.saveOrSend(payload, isOnline);
@@ -226,11 +254,18 @@ async function startNativeTracking(set: any, get: any) {
     };
 
     const battery = await Battery.getBatteryLevelAsync().catch(() => 1);
-    const interval = battery * 100 <= BATTERY_LOW_THRESHOLD ? LOCATION_INTERVAL_LOW_BATTERY : LOCATION_INTERVAL_NORMAL;
+    const interval =
+      battery * 100 <= BATTERY_LOW_THRESHOLD
+        ? LOCATION_INTERVAL_LOW_BATTERY
+        : LOCATION_INTERVAL_NORMAL;
 
     locationSubscription = await Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.High, timeInterval: interval, distanceInterval: 5 },
-      sendLocation
+      {
+        accuracy: Location.Accuracy.High,
+        timeInterval: interval,
+        distanceInterval: 5,
+      },
+      sendLocation,
     );
   } catch (err) {
     console.error('Error starting native tracking:', err);

@@ -13,8 +13,10 @@ Este módulo es para la creación y gestión de usuarios por parte de roles auto
 - **Acceso:** `ADMIN`, `SUPERVISOR`
 
 #### Body para Administradores (`ADMIN`)
+
 - Un `ADMIN` puede crear usuarios con cualquier rol (`ADMIN`, `SUPERVISOR`, `USER`).
 - Si crea un `USER`, es **obligatorio** especificar a qué supervisor pertenecerá.
+
 ```json
 {
   "nombre": "Nuevo Supervisor",
@@ -27,8 +29,10 @@ Este módulo es para la creación y gestión de usuarios por parte de roles auto
 ```
 
 #### Body para Supervisores (`SUPERVISOR`)
+
 - Un `SUPERVISOR` solo puede crear usuarios con rol `USER`.
 - El nuevo usuario se le asigna **automáticamente**. No se debe enviar `rol` ni `supervisorId`.
+
 ```json
 {
   "nombre": "Juan Personal",
@@ -39,6 +43,7 @@ Este módulo es para la creación y gestión de usuarios por parte de roles auto
 ```
 
 - **Respuesta de éxito (201):**
+
 ```json
 {
   "message": "Usuario creado exitosamente",
@@ -57,6 +62,7 @@ Este módulo es para la creación y gestión de usuarios por parte de roles auto
   - `ADMIN`: Recibe una lista de **todos** los usuarios del sistema.
   - `SUPERVISOR`: Recibe una lista de **únicamente** los usuarios que tiene asignados.
 - **Respuesta de éxito (200):**
+
 ```json
 [
   {
@@ -93,6 +99,7 @@ Este módulo es para la creación y gestión de usuarios por parte de roles auto
   - `ADMIN`: Puede modificar cualquier usuario y cualquier campo.
   - `SUPERVISOR`: Solo puede modificar a sus propios usuarios. No puede cambiarles el `rol`.
 - **Cuerpo (JSON):**
+
 ```json
 {
   "nombre": "Juan Personal Actualizado",
@@ -102,6 +109,7 @@ Este módulo es para la creación y gestión de usuarios por parte de roles auto
   "is_active": false
 }
 ```
+
 - **Respuesta de éxito (200):** `{ "message": "Usuario actualizado exitosamente" }`
 - **Respuesta de error:** `403 Forbidden` si un supervisor intenta modificar un usuario que no le pertenece.
 
