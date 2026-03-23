@@ -237,6 +237,11 @@ export default function UsersScreen() {
   };
 
   const handleDelete = async (id: number) => {
+    if (id === currentUser?.id) {
+      showErrorToast('No puedes eliminar tu propio usuario.');
+      setConfirmDelete(null);
+      return;
+    }
     try {
       await usersService.delete(id);
       setConfirmDelete(null);
@@ -429,19 +434,19 @@ export default function UsersScreen() {
                     color={COLORS.primary}
                   />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.actionBtn,
-                    { backgroundColor: COLORS.danger + '20' },
-                    isSupervisor && u.rol !== 'USER' && { opacity: 0.5 },
-                  ]}
-                  onPress={() => setConfirmDelete(u.id_user)}
-                  disabled={
-                    (isSupervisor && u.rol !== 'USER') || u.id_user === currentUser?.id
-                  }
-                >
-                  <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
-                </TouchableOpacity>
+                {u.id_user !== currentUser?.id && (
+                  <TouchableOpacity
+                    style={[
+                      styles.actionBtn,
+                      { backgroundColor: COLORS.danger + '20' },
+                      isSupervisor && u.rol !== 'USER' && { opacity: 0.5 },
+                    ]}
+                    onPress={() => setConfirmDelete(u.id_user)}
+                    disabled={isSupervisor && u.rol !== 'USER'}
+                  >
+                    <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           ))}
