@@ -1,6 +1,7 @@
 # Capa de Acceso a Datos
 
 ## Herramientas de conexión
+
 - **MySQL2**: Librería utilizada para establecer el pool de conexiones.
 - **Transacciones SQL**: Se emplean para asegurar que los lotes de ubicaciones (sincronización offline) se guarden de forma atómica.
 
@@ -27,15 +28,15 @@ erDiagram
     USERS ||--o{ ALERTS : has
     USERS ||--o{ CONSENTS : gives
     USERS ||--o{ SESSIONS : starts
-    
+
     USERS ||--o{ SUPERVISOR_USER : supervises_as_supervisor
     USERS ||--o{ SUPERVISOR_USER : is_supervised_as_user
-    
+
     USERS ||--o{ USER_CLIENT : belongs_to_as_user
     CLIENTS ||--o{ USER_CLIENT : has_as_client
-    
+
     CLIENTS }o--|| USERS : managed_by_client_admin
-    
+
     GEOFENCES ||--o{ GEOFENCE_EVENTS : defines
 
     CLIENTS {
@@ -101,7 +102,7 @@ erDiagram
         DATETIME login_time
         BOOLEAN is_active
     }
-    
+
     LOCATIONS {
         BIGINT id_location
         INT id_user
@@ -115,7 +116,7 @@ erDiagram
         TIMESTAMP timestamp_recepcion
         ENUM estado_sincronizacion
     }
-    
+
     USERS {
         INT id_user
         VARCHAR nombre
@@ -143,4 +144,3 @@ erDiagram
         INT created_by
     }
 ```
-

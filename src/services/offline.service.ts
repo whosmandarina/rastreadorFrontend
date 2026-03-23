@@ -37,14 +37,23 @@ export const offlineDB = {
     await db!.runAsync(
       `INSERT INTO pending_locations (latitud, longitud, precision_gps, velocidad, bateria, senal, timestamp_captura)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [loc.latitud, loc.longitud, loc.precision_gps ?? null, loc.velocidad ?? null,
-       loc.bateria ?? null, loc.senal ?? null, loc.timestamp_captura]
+      [
+        loc.latitud,
+        loc.longitud,
+        loc.precision_gps ?? null,
+        loc.velocidad ?? null,
+        loc.bateria ?? null,
+        loc.senal ?? null,
+        loc.timestamp_captura,
+      ],
     );
   },
 
   getPending: async (): Promise<(OfflineLocation & { id: number })[]> => {
     if (!db) await offlineDB.init();
-    return await db!.getAllAsync('SELECT * FROM pending_locations ORDER BY timestamp_captura ASC');
+    return await db!.getAllAsync(
+      'SELECT * FROM pending_locations ORDER BY timestamp_captura ASC',
+    );
   },
 
   clearAll: async (): Promise<void> => {
@@ -54,7 +63,9 @@ export const offlineDB = {
 
   count: async (): Promise<number> => {
     if (!db) await offlineDB.init();
-    const result = await db!.getFirstAsync('SELECT COUNT(*) as count FROM pending_locations') as any;
+    const result = (await db!.getFirstAsync(
+      'SELECT COUNT(*) as count FROM pending_locations',
+    )) as any;
     return result?.count ?? 0;
   },
 };

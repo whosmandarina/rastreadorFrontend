@@ -1,6 +1,17 @@
 import { create } from 'zustand';
-import { authService, AuthUser, LoginPayload, RegisterPayload } from '../services/auth.service';
-import { saveToken, saveUser, getToken, getUser, clearAuth } from '../utils/storage';
+import {
+  authService,
+  AuthUser,
+  LoginPayload,
+  RegisterPayload,
+} from '../services/auth.service';
+import {
+  saveToken,
+  saveUser,
+  getToken,
+  getUser,
+  clearAuth,
+} from '../utils/storage';
 
 interface AuthState {
   user: AuthUser | null;
@@ -38,7 +49,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (err: any) {
       const msg =
-        err.response?.data?.message || 'Error al iniciar sesión. Intenta de nuevo.';
+        err.response?.data?.message ||
+        'Error al iniciar sesión. Intenta de nuevo.';
       set({ error: msg, isLoading: false });
       throw err;
     }
@@ -51,7 +63,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false });
     } catch (err: any) {
       const msg =
-        err.response?.data?.message || 'Error al registrarse. Intenta de nuevo.';
+        err.response?.data?.message ||
+        'Error al registrarse. Intenta de nuevo.';
       set({ error: msg, isLoading: false });
       throw err;
     }
@@ -65,7 +78,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // ignore logout errors
     } finally {
       await clearAuth();
-      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
     }
   },
 

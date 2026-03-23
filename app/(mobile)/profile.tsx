@@ -1,4 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
 import { useAuthStore } from '../../src/stores/auth.store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTrackingStore } from '../../src/stores/tracking.store';
@@ -18,7 +24,9 @@ export default function ProfileScreen() {
       {/* Avatar */}
       <View style={styles.avatarSection}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.nombre?.charAt(0).toUpperCase()}</Text>
+          <Text style={styles.avatarText}>
+            {user?.nombre?.charAt(0).toUpperCase()}
+          </Text>
         </View>
         <Text style={styles.name}>{user?.nombre}</Text>
         <Text style={styles.correo}>{user?.correo}</Text>
@@ -38,9 +46,10 @@ export default function ProfileScreen() {
       {/* Tracking warning */}
       {isTracking && (
         <View style={styles.trackingBanner}>
-          <Ionicons name='radio-outline' size={20} color={COLORS.success} />
+          <Ionicons name="radio-outline" size={20} color={COLORS.success} />
           <Text style={styles.trackingBannerText}>
-            El rastreo está activo. Se detendrá automáticamente al cerrar sesión.
+            El rastreo está activo. Se detendrá automáticamente al cerrar
+            sesión.
           </Text>
         </View>
       )}
@@ -53,7 +62,15 @@ export default function ProfileScreen() {
   );
 }
 
-function InfoRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+function InfoRow({
+  label,
+  value,
+  last,
+}: {
+  label: string;
+  value: string;
+  last?: boolean;
+}) {
   return (
     <View style={[styles.row, !last && styles.rowBorder]}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -66,19 +83,59 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   content: { padding: 24, paddingTop: 60, gap: 16, paddingBottom: 40 },
   avatarSection: { alignItems: 'center', gap: 8, marginBottom: 8 },
-  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   avatarText: { fontSize: 36, color: '#fff', fontWeight: '800' },
   name: { fontSize: 22, fontWeight: '800', color: COLORS.text },
   correo: { fontSize: 14, color: COLORS.textMuted },
-  roleBadge: { backgroundColor: COLORS.primary + '20', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 4, borderWidth: 1, borderColor: COLORS.primary + '40' },
+  roleBadge: {
+    backgroundColor: COLORS.primary + '20',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '40',
+  },
   roleText: { color: COLORS.primary, fontSize: 13, fontWeight: '700' },
-  card: { backgroundColor: COLORS.bgCard, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border },
+  card: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
   row: { flexDirection: 'row', justifyContent: 'space-between', padding: 16 },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
   rowLabel: { fontSize: 14, color: COLORS.textMuted },
   rowValue: { fontSize: 14, color: COLORS.text, fontWeight: '600' },
-  trackingBanner: { backgroundColor: COLORS.success + '15', borderRadius: 12, padding: 14, flexDirection: 'row', gap: 10, borderWidth: 1, borderColor: COLORS.success + '30' },
-  trackingBannerText: { flex: 1, fontSize: 13, color: COLORS.success, lineHeight: 20 },
-  logoutBtn: { backgroundColor: COLORS.danger + '15', borderWidth: 1, borderColor: COLORS.danger + '40', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  trackingBanner: {
+    backgroundColor: COLORS.success + '15',
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: COLORS.success + '30',
+  },
+  trackingBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.success,
+    lineHeight: 20,
+  },
+  logoutBtn: {
+    backgroundColor: COLORS.danger + '15',
+    borderWidth: 1,
+    borderColor: COLORS.danger + '40',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
   logoutText: { color: COLORS.danger, fontSize: 16, fontWeight: '700' },
 });

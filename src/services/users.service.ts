@@ -10,18 +10,23 @@ export interface User {
   created_at: string;
 }
 
+const normalizeUser = (user: any): User => ({
+  ...user,
+  is_active: Boolean(user?.is_active),
+});
+
 export const usersService = {
   getAll: async (): Promise<User[]> => {
     const { data } = await api.get('/users');
-    return data;
+    return Array.isArray(data) ? data.map(normalizeUser) : [];
   },
   getById: async (id: number): Promise<User> => {
     const { data } = await api.get(`/users/${id}`);
-    return data;
+    return normalizeUser(data);
   },
   update: async (id: number, payload: Partial<User>) => {
     const { data } = await api.put(`/users/${id}`, payload);
-    return data;
+    return normalizeUser(data);
   },
   delete: async (id: number) => {
     const { data } = await api.delete(`/users/${id}`);

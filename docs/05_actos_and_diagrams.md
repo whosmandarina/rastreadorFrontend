@@ -4,12 +4,12 @@
 
 El sistema define roles específicos con permisos diferenciados sobre la información y las acciones disponibles.
 
-| Rol | Descripción | Permisos Principales |
-| :--- | :--- | :--- |
-| **`ADMIN`** | Administrador del sistema global. | Control total (CRUD) de usuarios, clientes, geocercas y reportes. |
-| **`SUPERVISOR`** | Personal de monitoreo operativo. | CRUD (Crear, Leer, Actualizar, Eliminar) de los usuarios que tiene asignados. |
-| **`CLIENT`** | Representante de una empresa (cliente). | Ver y gestionar al personal y reportes asociados a su organización. |
-| **`USER`** | Usuario rastreado (conductor/operario). | Transmitir ubicación, aceptar consentimiento y ver su propio estado. |
+| Rol              | Descripción                             | Permisos Principales                                                          |
+| :--------------- | :-------------------------------------- | :---------------------------------------------------------------------------- |
+| **`ADMIN`**      | Administrador del sistema global.       | Control total (CRUD) de usuarios, clientes, geocercas y reportes.             |
+| **`SUPERVISOR`** | Personal de monitoreo operativo.        | CRUD (Crear, Leer, Actualizar, Eliminar) de los usuarios que tiene asignados. |
+| **`CLIENT`**     | Representante de una empresa (cliente). | Ver y gestionar al personal y reportes asociados a su organización.           |
+| **`USER`**       | Usuario rastreado (conductor/operario). | Transmitir ubicación, aceptar consentimiento y ver su propio estado.          |
 
 ## Diagramas de Secuencia (Inferidos)
 
@@ -20,7 +20,7 @@ sequenceDiagram
     participant MobileApp
     participant Backend
     participant DB
-    
+
     MobileApp->>Backend: POST /api/auth/login (correo, password, device_id)
     Backend->>DB: Consultar usuario y verificar contraseña
     DB-->>Backend: Usuario válido (Rol: USER)
@@ -38,7 +38,7 @@ sequenceDiagram
     participant GeofenceService
     participant DB
     participant DashboardWeb
-    
+
     MobileApp->>Backend: POST /api/locations/sync (Array de ubicaciones)
     loop Cada punto de ubicación
         Backend->>DB: Guardar ubicación (INSERT Locations)
