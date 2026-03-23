@@ -12,6 +12,7 @@ import { usersService, User } from '../../src/services/users.service';
 import api from '../../src/services/api';
 import { COLORS, API_URL } from '../../src/constants';
 import { getToken } from '../../src/utils/storage';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function ReportsScreen() {
   const [users, setUsers] = useState<User[]>([]);
@@ -156,7 +157,7 @@ export default function ReportsScreen() {
               disabled={!selectedUser}
             >
               <Text style={[styles.exportText, { color: COLORS.danger }]}>
-                📄 PDF
+                <Ionicons name="document-text-outline" size={14} /> PDF
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -165,7 +166,7 @@ export default function ReportsScreen() {
               disabled={!selectedUser}
             >
               <Text style={[styles.exportText, { color: COLORS.success }]}>
-                📊 Excel
+                <Ionicons name="stats-chart-outline" size={14} /> Excel
               </Text>
             </TouchableOpacity>
           </View>
@@ -175,7 +176,7 @@ export default function ReportsScreen() {
         <View style={styles.statsPanel}>
           {!selectedUser && (
             <View style={styles.placeholder}>
-              <Text style={styles.placeholderIcon}>📊</Text>
+              <Ionicons name="stats-chart-outline" size={48} color={COLORS.textMuted} />
               <Text style={styles.placeholderText}>
                 Selecciona un usuario y un rango de fechas para ver el reporte
               </Text>
@@ -202,19 +203,19 @@ export default function ReportsScreen() {
                 <StatCard
                   label="Velocidad Promedio"
                   value={`${parseFloat(stats.velocidad_promedio || 0).toFixed(1)} km/h`}
-                  icon="🚗"
+                  iconName="speedometer-outline"
                   color={COLORS.primary}
                 />
                 <StatCard
                   label="Tiempo Detenido"
                   value={`${parseFloat(stats.tiempo_total_parado_minutos || 0).toFixed(0)} min`}
-                  icon="⏸"
+                  iconName="pause-circle-outline"
                   color={COLORS.warning}
                 />
                 <StatCard
                   label="Paradas"
                   value={`${(stats.paradas || []).length}`}
-                  icon="📍"
+                  iconName="location-outline"
                   color={COLORS.accent}
                 />
               </View>
@@ -248,10 +249,10 @@ export default function ReportsScreen() {
   );
 }
 
-function StatCard({ label, value, icon, color }: any) {
+function StatCard({ label, value, iconName, color }: any) {
   return (
     <View style={[styles.statCard, { borderColor: color + '40' }]}>
-      <Text style={styles.statIcon}>{icon}</Text>
+      <Ionicons name={iconName} size={24} color={color} />
       <Text style={[styles.statValue, { color }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -354,9 +355,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
   },
-  statIcon: { fontSize: 24 },
   statValue: { fontSize: 22, fontWeight: '800' },
   statLabel: { fontSize: 12, color: COLORS.textMuted, textAlign: 'center' },
   subTitle: {

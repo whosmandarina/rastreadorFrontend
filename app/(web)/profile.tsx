@@ -15,12 +15,12 @@ import { COLORS } from '../../src/constants';
 
 const ROLE_LABELS: Record<
   string,
-  { label: string; color: string; icon: string }
+  { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }
 > = {
-  ADMIN: { label: 'Administrador', color: COLORS.danger, icon: '🛡' },
-  SUPERVISOR: { label: 'Supervisor', color: COLORS.primary, icon: '👮' },
-  CLIENT: { label: 'Cliente', color: COLORS.accent, icon: '🏢' },
-  USER: { label: 'Usuario rastreado', color: COLORS.success, icon: '📍' },
+  ADMIN: { label: 'Administrador', color: COLORS.danger, icon: 'shield-checkmark-outline' },
+  SUPERVISOR: { label: 'Supervisor', color: COLORS.primary, icon: 'shield-outline' },
+  CLIENT: { label: 'Cliente', color: COLORS.accent, icon: 'business-outline' },
+  USER: { label: 'Usuario rastreado', color: COLORS.success, icon: 'location-outline' },
 };
 
 export default function ProfileWebScreen() {
@@ -38,7 +38,7 @@ export default function ProfileWebScreen() {
   const roleCfg = ROLE_LABELS[user?.rol ?? ''] ?? {
     label: user?.rol,
     color: COLORS.textMuted,
-    icon: '👤',
+    icon: 'person-outline',
   };
 
   const handleSave = async () => {
@@ -83,7 +83,7 @@ export default function ProfileWebScreen() {
             ]}
           >
             <Ionicons
-              name={roleCfg.icon as any}
+              name={roleCfg.icon}
               size={14}
               color={roleCfg.color}
               style={{ marginRight: 4 }}

@@ -312,7 +312,7 @@ export default function UsersScreen() {
           </Text>
         </View>
         <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
-          <Text style={styles.addBtnText}>+ Nuevo usuario</Text>
+          <Text style={styles.addBtnText}><Ionicons name="add-outline" size={14} color="#fff" /> Nuevo usuario</Text>
         </TouchableOpacity>
       </View>
 
@@ -452,7 +452,7 @@ export default function UsersScreen() {
                   onPress={() => setConfirmDelete(u.id_user)}
                   disabled={isSupervisor && u.rol !== 'USER'}
                 >
-                  <Text style={styles.actionBtnText}>🗑</Text>
+                  <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
                 </TouchableOpacity>
               </View>
             </View>

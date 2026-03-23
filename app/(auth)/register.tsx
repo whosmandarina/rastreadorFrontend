@@ -130,7 +130,7 @@ export default function RegisterScreen() {
 
           {/* Código de supervisor */}
           <View style={styles.field}>
-            <Text style={styles.supervisorLabel}>🔑 Código de Supervisor</Text>
+            <Text style={styles.supervisorLabel}><Ionicons name="key-outline" size={15} color={COLORS.primary} /> Código de Supervisor</Text>
             <TextInput
               style={[
                 styles.supervisorInput,
