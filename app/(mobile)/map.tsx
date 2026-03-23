@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useTrackingStore } from '../../src/stores/tracking.store';
 import { COLORS } from '../../src/constants';
+import { useRef, useEffect, useState, useMemo } from 'react';
 
 function buildMapHTML(lat: number, lng: number): string {
   return `<!DOCTYPE html><html><head>
@@ -26,22 +27,71 @@ function buildMapHTML(lat: number, lng: number): string {
       iconAnchor: [10, 10],
     });
 
-    L.marker([${lat}, ${lng}], { icon: pulseIcon })
+    window.userMarker = L.marker([${lat}, ${lng}], { icon: pulseIcon })
       .bindPopup('<b>Tu ubicación actual</b>')
       .addTo(map)
       .openPopup();
 
     // Accuracy circle
-    L.circle([${lat}, ${lng}], {
+    window.accuracyCircle = L.circle([${lat}, ${lng}], {
       radius: 30, color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.1, weight: 1
     }).addTo(map);
+
+    window.updateLocation = function(newLat, newLng) {
+      const latlng = [newLat, newLng];
+      window.userMarker.setLatLng(latlng);
+      window.accuracyCircle.setLatLng(latlng);
+      map.flyTo(latlng, 16, { animate: true, duration: 1.2 });
+    };
+
+    window.addEventListener('message', function(event) {
+      let data = event.data;
+      if (typeof data === 'string') {
+        try { data = JSON.parse(data); } catch(e) {}
+      }
+      if (data && data.type === 'location_update') {
+        window.updateLocation(data.lat, data.lng);
+      }
+    });
   </script></body></html>`;
 }
 
 export default function MapScreen() {
   const { currentLocation, isTracking, lastUpdate } = useTrackingStore();
+  const iframeRef = useRef<any>(null);
+  const webViewRef = useRef<any>(null);
+  const [initialLoc, setInitialLoc] = useState(currentLocation);
 
-  if (!currentLocation) {
+  // Capturar la primera ubicación para no reconstruir el mapa HTML entero
+  useEffect(() => {
+    if (!initialLoc && currentLocation) {
+      setInitialLoc(currentLocation);
+    }
+  }, [currentLocation, initialLoc]);
+
+  // Actualizar marcadores dinámicamente sin recargar iframe/webview
+  useEffect(() => {
+    if (!currentLocation || !initialLoc) return;
+    const { latitud, longitud } = currentLocation;
+
+    if (Platform.OS === 'web' && iframeRef.current?.contentWindow) {
+      try {
+        iframeRef.current.contentWindow.postMessage(
+          { type: 'location_update', lat: latitud, lng: longitud }, 
+          '*'
+        );
+      } catch (e) {}
+    } else if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(`
+        if (typeof window.updateLocation === 'function') {
+          window.updateLocation(${latitud}, ${longitud});
+        }
+        true;
+      `);
+    }
+  }, [currentLocation, initialLoc]);
+
+  if (!initialLoc) {
     return (
       <View style={styles.empty}>
         <Text style={styles.emptyIcon}>🗺</Text>
@@ -55,8 +105,12 @@ export default function MapScreen() {
     );
   }
 
-  const { latitud, longitud } = currentLocation;
-  const html = buildMapHTML(latitud, longitud);
+  // Generar HTML una sola vez basado en initialLoc para evitar parpadeos
+  const html = useMemo(() => {
+    return buildMapHTML(initialLoc.latitud, initialLoc.longitud);
+  }, [initialLoc]);
+
+  const activeLoc = currentLocation || initialLoc;
   const updateStr = lastUpdate
     ? new Date(lastUpdate).toLocaleTimeString('es-MX')
     : '—';
@@ -66,7 +120,7 @@ export default function MapScreen() {
       {/* Info bar */}
       <View style={styles.infoBar}>
         <Text style={styles.coordText}>
-          📍 {latitud.toFixed(5)}, {longitud.toFixed(5)}
+          📍 {activeLoc.latitud.toFixed(5)}, {activeLoc.longitud.toFixed(5)}
         </Text>
         <Text style={styles.timeText}>🕐 {updateStr}</Text>
       </View>
@@ -74,6 +128,7 @@ export default function MapScreen() {
       {/* Map */}
       {Platform.OS === 'web' ? (
         <iframe
+          ref={iframeRef}
           srcDoc={html}
           style={{ flex: 1, border: 'none' } as any}
           title="Mi ubicación"
@@ -85,6 +140,7 @@ export default function MapScreen() {
             const { WebView } = require('react-native-webview');
             return (
               <WebView
+                ref={webViewRef}
                 source={{ html }}
                 style={{ flex: 1 }}
                 javaScriptEnabled

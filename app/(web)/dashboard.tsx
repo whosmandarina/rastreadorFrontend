@@ -32,7 +32,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 function buildLeafletHTML(users: LiveUser[], geofences: Geofence[]): string {
   const userMarkers = users.filter((u) => u.latitud && u.longitud).map((u) => `
-    L.circleMarker([${u.latitud}, ${u.longitud}], {
+    window.userMarkers[${u.id_user}] = L.circleMarker([${u.latitud}, ${u.longitud}], {
       radius: 10, fillColor: "${u.status === 'ONLINE' ? '#2a9d6e' : '#7a8a8d'}",
       color: "#fff", weight: 2, opacity: 1, fillOpacity: 0.9
     }).bindPopup("<b>${u.nombre || 'Usuario ' + u.id_user}</b><br/>Estado: ${u.status}<br/>Batería: ${u.bateria ?? '—'}%").addTo(map);
@@ -71,8 +71,34 @@ function buildLeafletHTML(users: LiveUser[], geofences: Geofence[]): string {
   </head><body><div id="map"></div><script>
     const map = L.map('map').setView(${center}, 12);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap © CARTO', maxZoom: 19, subdomains: 'abcd' }).addTo(map);
+    window.userMarkers = {};
     ${geofenceLayers}
     ${userMarkers}
+    
+    window.addEventListener('message', function(e) {
+      var d = e.data;
+      if (typeof d === 'string') {
+        try { d = JSON.parse(d); } catch(err) {}
+      }
+      if (d && d.type === 'location_update') {
+        var m = window.userMarkers[d.id_user];
+        if (m) {
+          m.setLatLng([d.latitud, d.longitud]);
+          m.setStyle({ fillColor: d.status === 'ONLINE' ? '#2a9d6e' : '#7a8a8d' });
+          m.setPopupContent("<b>" + d.nombre + "</b><br/>Estado: " + d.status + "<br/>Batería: " + (d.bateria ?? '—') + "%");
+        } else {
+          window.userMarkers[d.id_user] = L.circleMarker([d.latitud, d.longitud], {
+            radius: 10, fillColor: d.status === 'ONLINE' ? '#2a9d6e' : '#7a8a8d',
+            color: "#fff", weight: 2, opacity: 1, fillOpacity: 0.9
+          }).bindPopup("<b>" + d.nombre + "</b><br/>Estado: " + d.status + "<br/>Batería: " + (d.bateria ?? '—') + "%").addTo(map);
+        }
+      } else if (d && d.type === 'fly_to') {
+        map.flyTo([d.lat, d.lng], d.zoom, { animate: true, duration: 1.2 });
+        if (d.id_user && window.userMarkers[d.id_user]) {
+          setTimeout(function() { window.userMarkers[d.id_user].openPopup(); }, 1300);
+        }
+      }
+    });
   </script></body></html>`;
 }
 
