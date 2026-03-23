@@ -1,6 +1,10 @@
-export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL ||
-  'https://rastreadorapp-production.up.railway.app';
+if (!process.env.EXPO_PUBLIC_API_BASE_URL) {
+  throw new Error(
+    'Missing API URL. Please set EXPO_PUBLIC_API_BASE_URL in your .env file.',
+  );
+}
+
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 export const API_URL = `${API_BASE_URL}/api`;
 export const SOCKET_URL = API_BASE_URL;
 

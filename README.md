@@ -1,6 +1,6 @@
 # Rastreador - Frontend
 
-Este es el repositorio del frontend para la plataforma de rastreo "Rastreador". Es una aplicación multiplataforma (iOS, Android y Web) construida con React Native y Expo, diseñada para interactuar con el [backend de Rastreador](https://github.com/usuario/rastreador-backend). *(Nota: Reemplaza el enlace con la URL real de tu backend)*.
+Este es el repositorio del frontend para la plataforma de rastreo "Rastreador". Es una aplicación multiplataforma (iOS, Android y Web) construida con React Native y Expo, diseñada para interactuar con el [backend de Rastreador](https://github.com/whosmandarina/rastreadorApp.git).
 
 La aplicación ofrece dos interfaces principales:
 1.  **Aplicación Móvil**: Para que los usuarios (ej. conductores, personal de campo) reporten su ubicación en tiempo real.
