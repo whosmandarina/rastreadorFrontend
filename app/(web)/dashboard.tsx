@@ -260,8 +260,10 @@ export default function DashboardScreen() {
         <View style={styles.headerRight}>
           {isAdmin && (
             <TouchableOpacity style={[styles.geoToggleBtn, showGeoPanel && styles.geoToggleBtnActive]} onPress={() => setShowGeoPanel(!showGeoPanel)}>
-              <Ionicons name="location-outline" size={14} color={showGeoPanel ? '#fff' : COLORS.primary} />
-              <Text style={[styles.geoToggleText, showGeoPanel && styles.geoToggleTextActive]}>Geocercas</Text>
+              <Ionicons name={showGeoPanel ? "people-outline" : "location-outline"} size={14} color={showGeoPanel ? '#fff' : COLORS.primary} />
+              <Text style={[styles.geoToggleText, showGeoPanel && styles.geoToggleTextActive]}>
+                {showGeoPanel ? 'Usuarios' : 'Geocercas'}
+              </Text>
             </TouchableOpacity>
           )}
           <View style={[styles.connBadge, { backgroundColor: connected ? COLORS.success + '20' : COLORS.accent + '20' }]}>
@@ -307,7 +309,6 @@ export default function DashboardScreen() {
             <>
               <View style={styles.panelHeader}>
                 <Text style={styles.panelTitle}>Geocercas</Text>
-                <TouchableOpacity style={styles.addBtn} onPress={openCreateGeo}><Text style={styles.addBtnText}>+</Text></TouchableOpacity>
               </View>
               <ScrollView showsVerticalScrollIndicator={false}>
                 {geofences.map((g) => (

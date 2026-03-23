@@ -50,6 +50,7 @@ const EMPTY_EDIT = {
   telefono: '',
   rol: '',
   is_active: true,
+  supervisorId: '',
 };
 
 type ToastState = {
@@ -141,6 +142,7 @@ export default function UsersScreen() {
       telefono: u.telefono ?? '',
       rol: u.rol,
       is_active: Boolean(u.is_active),
+      supervisorId: String(u.id_supervisor ?? ''),
     });
     setEditing(u);
     setFieldErrors({});
@@ -207,6 +209,10 @@ export default function UsersScreen() {
       const telError = validators.telefono(editForm.telefono);
       if (telError) errs.telefono = telError;
     }
+    if (isAdmin && editForm.rol === 'USER' && !editForm.supervisorId) {
+      errs.supervisorId = 'Debes asignar un supervisor a este usuario';
+    }
+
 
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
@@ -221,7 +227,12 @@ export default function UsersScreen() {
         telefono: editForm.telefono.trim() || undefined,
         is_active: Boolean(editForm.is_active),
       };
-      if (isAdmin) payload.rol = editForm.rol;
+      if (isAdmin) {
+        payload.rol = editForm.rol;
+        if (editForm.rol === 'USER' && editForm.supervisorId) {
+          payload.supervisorId = Number(editForm.supervisorId);
+        }
+      }
       await usersService.update(editing.id_user, payload);
       setShowEdit(false);
       load();
@@ -653,6 +664,34 @@ export default function UsersScreen() {
                       </TouchableOpacity>
                     ))}
                   </View>
+                </View>
+              )}
+
+              {isAdmin && editForm.rol === 'USER' && (
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Asignar a Supervisor *</Text>
+                  {supervisors.length === 0 ? (
+                    <View style={styles.warnBox}><Text style={styles.warnText}>⚠️ No hay supervisores disponibles.</Text></View>
+                  ) : (
+                    <ScrollView style={styles.supervisorList} showsVerticalScrollIndicator={false}>
+                      {supervisors.map((s) => (
+                        <TouchableOpacity
+                          key={s.id_user}
+                          style={[ styles.supervisorOption, editForm.supervisorId === String(s.id_user) && styles.supervisorOptionActive ]}
+                          onPress={() => setEditForm((p) => ({ ...p, supervisorId: String(s.id_user) }))}
+                        >
+                          <View style={styles.supAvatar}><Text style={styles.supAvatarText}>{s.nombre.charAt(0)}</Text></View>
+                          <Text style={[ styles.supervisorOptionText, editForm.supervisorId === String(s.id_user) && { color: COLORS.primary } ]}>
+                            {s.nombre}
+                          </Text>
+                          {editForm.supervisorId === String(s.id_user) && (
+                            <Text style={{ color: COLORS.primary, fontWeight: '800' }}>✓</Text>
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  )}
+                  {fieldErrors.supervisorId && <Text style={styles.fieldError}>⚠️ {fieldErrors.supervisorId}</Text>}
                 </View>
               )}
 

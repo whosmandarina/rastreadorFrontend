@@ -8,6 +8,7 @@ export interface User {
   rol: string;
   is_active: boolean;
   created_at: string;
+  id_supervisor?: number;
 }
 
 const normalizeUser = (user: any): User => ({
