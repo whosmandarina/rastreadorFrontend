@@ -20,7 +20,7 @@ const ROLE_LABELS: Record<
   ADMIN: { label: 'Administrador', color: COLORS.danger, icon: 'shield-checkmark-outline' },
   SUPERVISOR: { label: 'Supervisor', color: COLORS.primary, icon: 'shield-outline' },
   CLIENT: { label: 'Cliente', color: COLORS.accent, icon: 'business-outline' },
-  USER: { label: 'Usuario rastreado', color: COLORS.success, icon: 'location-outline' },
+  USER: { label: 'Usuario', color: COLORS.success, icon: 'location-outline' },
 };
 
 export default function ProfileWebScreen() {
@@ -47,7 +47,21 @@ export default function ProfileWebScreen() {
     setError('');
     setSuccess(false);
     try {
-      await usersService.update(user.id, { nombre: form.nombre.trim() });
+      const currentUserData = await usersService.getById(user.id);
+      const { id_user, created_at, ...rest } = currentUserData;
+      const payload = {
+        ...rest,
+        nombre: form.nombre.trim(),
+      };
+
+      await usersService.update(user.id, payload);
+
+      const newAuthUser = {
+        ...user,
+        nombre: form.nombre.trim(),
+      };
+
+      useAuthStore.setState({ user: newAuthUser });
       setSuccess(true);
       setEditing(false);
     } catch (e: any) {
